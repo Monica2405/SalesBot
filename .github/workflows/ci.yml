@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    name: Python lint + unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --all-packages --frozen
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      # DB tests skip here (no database); the `database` job runs them for real.
+      - run: uv run pytest -m "not db"
+
+  admin:
+    name: Admin lint + build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/admin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/admin/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+
+  database:
+    name: Migrations + RLS isolation (local Supabase)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      # Applies supabase/migrations and seed.sql to a fresh local stack.
+      - run: supabase start -x studio,imgproxy,realtime,postgres-meta
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --all-packages --frozen
+      - name: RLS isolation test (must not skip)
+        env:
+          REQUIRE_DB: "1"
+          SUPABASE_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: uv run pytest -m db -rs
+      - if: always()
+        run: supabase stop --no-backup
+
+  docker:
+    name: Build service images
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -f apps/api/Dockerfile -t salesbot-api:ci .
+      - run: docker build -f apps/voice-agent/Dockerfile -t salesbot-agent:ci .
+      - name: API image serves /health
+        run: |
+          docker run -d --name api -p 8000:8000 salesbot-api:ci
+          for i in $(seq 1 20); do curl -fsS localhost:8000/health && exit 0; sleep 1; done
+          docker logs api; exit 1
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
