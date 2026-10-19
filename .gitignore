@@ -1,0 +1,60 @@
+# ---- Environment / secrets ----
+.env
+.env.*
+!.env.example
+!**/.env.example
+*.pem
+*.key
+
+# Google credentials / OAuth tokens
+credentials*.json
+client_secret*.json
+token*.json
+service-account*.json
+google-*.json
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# ---- Node ----
+node_modules/
+apps/admin/dist/
+*.tsbuildinfo
+npm-debug.log*
+coverage/
+
+# ---- Deploy / tooling ----
+.vercel/
+supabase/.temp/
+supabase/.branches/
+
+# ---- Call recordings / audio / local storage (personal data) ----
+storage/
+recordings/
+*.wav
+*.mp3
+*.ogg
+*.m4a
+*.flac
+
+# ---- IDE / OS ----
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
