@@ -1,0 +1,85 @@
+-- Local/dev seed only (`supabase db reset`). Never run against production.
+-- Demo login for the admin app: owner@demo.local / demo-password-local-only
+
+-- Demo owner user (Supabase Auth). Fixed ids so tests and docs can reference them.
+insert into auth.users (
+  instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
+  raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+  confirmation_token, recovery_token, email_change, email_change_token_new
+) values (
+  '00000000-0000-0000-0000-000000000000',
+  '11111111-1111-1111-1111-111111111111',
+  'authenticated', 'authenticated', 'owner@demo.local',
+  extensions.crypt('demo-password-local-only', extensions.gen_salt('bf')),
+  now(), '{"provider":"email","providers":["email"]}', '{}', now(), now(),
+  '', '', '', ''
+);
+
+insert into auth.identities (
+  id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at
+) values (
+  gen_random_uuid(),
+  '11111111-1111-1111-1111-111111111111',
+  '11111111-1111-1111-1111-111111111111',
+  '{"sub":"11111111-1111-1111-1111-111111111111","email":"owner@demo.local"}',
+  'email', now(), now(), now()
+);
+
+-- Demo business on the dentist pack
+insert into public.businesses (id, name, slug, pack_id, phone_number, settings, usage_cap_minutes)
+values (
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+  'Smile Dental Clinic (demo)', 'smile-dental-demo', 'dentist', '+910000000000',
+  '{"business_hours": "Mon-Sat 10am-8pm", "business_address": "Demo Road, Pune",
+    "handoff_number": null}',
+  500
+);
+
+insert into public.business_members (business_id, user_id, role)
+values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11111111-1111-1111-1111-111111111111', 'owner');
+
+insert into public.packs_applied (business_id, pack_id, pack_version, applied_by)
+values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'dentist', 1, '11111111-1111-1111-1111-111111111111');
+
+insert into public.script_versions (id, business_id, version, pack_id, is_active, notes)
+values ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+        1, 'dentist', true, 'Initial script from dentist pack v1');
+
+insert into public.knowledge_items (business_id, question, answer, keywords) values
+  ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Do you accept cards?',
+   'Yes, we accept cards and UPI.', array['card', 'upi', 'payment']),
+  ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Is parking available?',
+   'Yes, there is free parking in front of the clinic.', array['parking']);
+
+-- One demo call that became a lead and a booking, with funnel events
+insert into public.leads (id, business_id, name, phone, source, stage, service_id, estimated_value_inr)
+values ('cccccccc-cccc-cccc-cccc-cccccccccccc', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+        'Demo Patient', '+919999999999', 'google_business', 'booked', 'cleaning', 1200);
+
+insert into public.calls (
+  id, business_id, lead_id, script_version_id, source, telephony_provider, provider_call_id,
+  from_number, to_number, language, status, outcome, consent_recording,
+  started_at, ended_at, duration_seconds, stt_seconds, llm_tokens_in, llm_tokens_out, tts_characters
+) values (
+  'dddddddd-dddd-dddd-dddd-dddddddddddd', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+  'cccccccc-cccc-cccc-cccc-cccccccccccc', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+  'google_business', 'mock', 'mock-call-1', '+919999999999', '+910000000000', 'hi',
+  'completed', 'booked', true,
+  now() - interval '1 day', now() - interval '1 day' + interval '3 minutes', 180,
+  150, 2400, 600, 1800
+);
+
+insert into public.appointments (business_id, lead_id, call_id, service_id, starts_at, ends_at, value_inr)
+values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+        'dddddddd-dddd-dddd-dddd-dddddddddddd', 'cleaning',
+        date_trunc('day', now()) + interval '2 days 11 hours',
+        date_trunc('day', now()) + interval '2 days 11 hours 40 minutes', 1200);
+
+insert into public.events (business_id, type, call_id, lead_id, source, occurred_at) values
+  ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'call_received', 'dddddddd-dddd-dddd-dddd-dddddddddddd', null, 'google_business', now() - interval '1 day'),
+  ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'lead_captured', 'dddddddd-dddd-dddd-dddd-dddddddddddd', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'google_business', now() - interval '1 day'),
+  ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'booking_created', 'dddddddd-dddd-dddd-dddd-dddddddddddd', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'google_business', now() - interval '1 day');
+
+insert into public.usage_records (business_id, call_id, period_month, call_seconds, stt_seconds, llm_tokens_in, llm_tokens_out, tts_characters)
+values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+        date_trunc('month', now())::date, 180, 150, 2400, 600, 1800);
