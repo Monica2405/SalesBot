@@ -3,7 +3,7 @@
 
 ADMIN := apps/admin
 
-.PHONY: help setup dev-api dev-agent dev-admin require-docker db-up db-down db-reset migrate test lint format
+.PHONY: help setup dev-api dev-agent dev-admin require-docker db-up db-down db-reset migrate test lint format load-clinic simulate-intake
 
 help:
 	@echo "setup      install Python (uv) + admin (npm) deps and git hooks"
@@ -17,6 +17,8 @@ help:
 	@echo "test       Python tests (DB tests skip if Supabase is down) + admin build"
 	@echo "lint       ruff + eslint + tsc"
 	@echo "format     ruff format + fix"
+	@echo "load-clinic FILE=x.yaml        load a clinic setup into SUPABASE_DB_URL (dev)"
+	@echo "simulate-intake ARGS='...'     send a signed fake registration (dev, see INTAKE_CONTRACT)"
 
 setup:
 	uv sync --all-packages
@@ -61,3 +63,9 @@ lint:
 format:
 	uv run ruff check --fix .
 	uv run ruff format .
+
+load-clinic:
+	uv run --package salesbot-api python -m salesbot_api.tools.load_clinic $(FILE)
+
+simulate-intake:
+	uv run --package salesbot-api python -m salesbot_api.tools.simulate_intake $(ARGS)

@@ -1,0 +1,46 @@
+# Example clinic setup for the dev database. Copy, fill in, then:
+#   uv run --package salesbot-api python -m salesbot_api.tools.load_clinic my-clinic.yaml
+# Times are local (Asia/Kolkata). Keep real clinic files out of git if they hold anything private.
+name: Demo Clinic
+slug: demo-clinic
+pack: clinic
+timezone: Asia/Kolkata
+default_language: mr
+
+# Only what differs from the defaults (docs/DECISIONS.md). All optional.
+settings:
+  practitioner_selection: any_available   # or default_practitioner (+ default_practitioner: <name>)
+  reschedule_approval: auto               # or staff
+  # hold_minutes: 5
+  # min_lead_minutes: 60
+  # lookahead_days: 14
+  # days_per_list: 9
+  # reminder_policy:
+  #   reminders: [{hours_before: 24, channels: [whatsapp]}, {hours_before: 2, channels: [whatsapp]}]
+  #   quiet_hours: {start: "21:00", end: "08:00"}
+
+practitioners:
+  - name: Dr. Asha Kulkarni
+    display_names: {hi: डॉ. आशा कुलकर्णी, mr: डॉ. आशा कुलकर्णी}
+    consultation_minutes: 15
+    first_visit_minutes: 30
+    hours:
+      mon: ["10:00-13:00", "17:00-20:00"]
+      tue: ["10:00-13:00", "17:00-20:00"]
+      wed: ["10:00-13:00"]
+      thu: ["10:00-13:00", "17:00-20:00"]
+      fri: ["10:00-13:00", "17:00-20:00"]
+      sat: ["10:00-14:00"]
+    breaks:
+      sat: ["12:00-12:30"]
+  - name: Dr. Rohan Mehta
+    display_names: {hi: डॉ. रोहन मेहता, mr: डॉ. रोहन मेहता}
+    consultation_minutes: 20
+    hours:
+      mon: ["09:00-12:00"]
+      wed: ["09:00-12:00", "16:00-19:00"]
+      fri: ["16:00-19:00"]
+
+closures:
+  - {date: 2026-11-08, reason: Diwali}                       # whole clinic
+  - {date: 2026-11-20, to: 2026-11-22, practitioner: Dr. Rohan Mehta, reason: Leave}

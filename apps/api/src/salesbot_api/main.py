@@ -6,12 +6,13 @@ from typing import Annotated, Any
 
 from fastapi import Depends, FastAPI, HTTPException, status
 
-from salesbot_api import db
+from salesbot_api import api_v1, db
 from salesbot_api.auth import AuthUser, current_user
 from salesbot_api.settings import Settings, get_settings
 from salesbot_core.packs import load_all_packs
 
 app = FastAPI(title="SalesBot API", version="0.1.0")
+app.include_router(api_v1.router)
 
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 
