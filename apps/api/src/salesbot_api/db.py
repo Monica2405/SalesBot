@@ -20,11 +20,15 @@ class DatabaseNotConfiguredError(RuntimeError):
 
 
 @contextmanager
-def connect(settings: Settings) -> Iterator[psycopg.Connection]:
+def connect(settings: Settings, *, autocommit: bool = False) -> Iterator[psycopg.Connection]:
+    """autocommit=True for code that opens its own `conn.transaction()` (booking, intake)."""
     if settings.supabase_db_url is None:
         raise DatabaseNotConfiguredError("SUPABASE_DB_URL is not set")
     with psycopg.connect(
-        settings.supabase_db_url.get_secret_value(), row_factory=dict_row, connect_timeout=5
+        settings.supabase_db_url.get_secret_value(),
+        row_factory=dict_row,
+        connect_timeout=5,
+        autocommit=autocommit,
     ) as conn:
         yield conn
 
