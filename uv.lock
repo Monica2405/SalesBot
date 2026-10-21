@@ -1079,12 +1079,14 @@ source = { editable = "packages/core" }
 dependencies = [
     { name = "pydantic" },
     { name = "pyyaml" },
+    { name = "tzdata" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "pydantic", specifier = ">=2.9" },
     { name = "pyyaml", specifier = ">=6.0" },
+    { name = "tzdata", specifier = ">=2024.1" },
 ]
 
 [[package]]
