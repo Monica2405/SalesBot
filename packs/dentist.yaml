@@ -1,0 +1,98 @@
+# Industry pack: dental clinic. Pure config, validated by salesbot_core.packs.schema.Pack.
+# Business-specific values (clinic name, hours, doctor names) live in the database, not here.
+id: dentist
+name: Dental clinic
+version: 1
+languages: [en, hi, mr]
+
+greeting:
+  en: "Hello, thank you for calling {business_name}. How can I help you today?"
+  hi: "नमस्ते, {business_name} में कॉल करने के लिए धन्यवाद। मैं आपकी क्या मदद कर सकती हूँ?"
+  mr: "नमस्कार, {business_name} मध्ये फोन केल्याबद्दल धन्यवाद. मी तुमची काय मदत करू शकते?"
+
+intake_questions:
+  - key: name
+    type: text
+    prompt:
+      en: "May I have your name, please?"
+      hi: "क्या मैं आपका नाम जान सकती हूँ?"
+      mr: "तुमचं नाव सांगाल का?"
+  - key: phone
+    type: phone
+    prompt:
+      en: "Is this the best number to reach you on?"
+      hi: "क्या आपसे संपर्क करने के लिए यही नंबर ठीक है?"
+      mr: "तुमच्याशी संपर्कासाठी हाच नंबर योग्य आहे का?"
+  - key: service
+    type: service
+    prompt:
+      en: "What would you like to come in for?"
+      hi: "आप किस काम के लिए आना चाहेंगे?"
+      mr: "तुम्हाला कशासाठी यायचं आहे?"
+  - key: is_new_patient
+    type: choice
+    choices: ["yes", "no"]
+    prompt:
+      en: "Have you visited us before?"
+      hi: "क्या आप पहले हमारे यहाँ आ चुके हैं?"
+      mr: "तुम्ही यापूर्वी आमच्याकडे आला आहात का?"
+  - key: preferred_time
+    type: date
+    prompt:
+      en: "When would you like to come in?"
+      hi: "आप कब आना चाहेंगे?"
+      mr: "तुम्हाला कधी यायला आवडेल?"
+
+services:
+  - id: consultation
+    name: { en: "Consultation", hi: "परामर्श", mr: "सल्ला" }
+    duration_minutes: 20
+    price_inr: 300
+  - id: cleaning
+    name: { en: "Teeth cleaning", hi: "दांतों की सफाई", mr: "दात स्वच्छता" }
+    duration_minutes: 40
+    price_inr: 1200
+  - id: filling
+    name: { en: "Filling", hi: "फिलिंग", mr: "फिलिंग" }
+    duration_minutes: 45
+    price_inr: 1500
+  - id: root_canal
+    name: { en: "Root canal", hi: "रूट कैनाल", mr: "रूट कॅनाल" }
+    duration_minutes: 90
+    price_inr: 6000
+  - id: extraction
+    name: { en: "Tooth extraction", hi: "दांत निकालना", mr: "दात काढणे" }
+    duration_minutes: 30
+    price_inr: 1500
+
+faqs:
+  - keywords: [timing, hours, open, समय, वेळ]
+    question: { en: "What are your hours?" }
+    answer: { en: "We are open {business_hours}." }
+  - keywords: [price, cost, fees, कितना, किती]
+    question: { en: "How much does a consultation cost?" }
+    answer: { en: "A consultation is around 300 rupees. The doctor will confirm costs for any treatment." }
+  - keywords: [address, location, where, पता, पत्ता]
+    question: { en: "Where are you located?" }
+    answer: { en: "We are at {business_address}." }
+
+emergency:
+  action: handoff
+  triggers:
+    - "severe pain"
+    - "bleeding"
+    - "swelling"
+    - "broken tooth"
+    - "accident"
+    - "बहुत दर्द"
+    - "खून"
+    - "सूजन"
+    - "खूप दुखतंय"
+    - "रक्त"
+    - "सूज"
+  message:
+    en: "That sounds urgent. Let me connect you with the clinic right away."
+    hi: "यह जरूरी लग रहा है। मैं आपको अभी क्लिनिक से जोड़ती हूँ।"
+    mr: "हे तातडीचं वाटतंय. मी तुम्हाला लगेच क्लिनिकशी जोडते."
+
+lead_stages: [new, contacted, booked, showed, treatment_started, paid, lost]

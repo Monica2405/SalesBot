@@ -1,0 +1,15 @@
+.git
+.env
+.env.*
+!.env.example
+.venv
+**/__pycache__
+**/.pytest_cache
+.ruff_cache
+apps/admin
+supabase
+docs
+storage
+recordings
+*.wav
+*.mp3

@@ -1,0 +1,16 @@
+[project]
+name = "salesbot-core"
+version = "0.1.0"
+description = "Shared code: industry pack schema and loader, funnel event types, provider interfaces"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "pydantic>=2.9",
+    "pyyaml>=6.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/salesbot_core"]

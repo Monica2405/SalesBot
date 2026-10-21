@@ -1,0 +1,67 @@
+# Industry pack: beauty salon. Exists so the engine is proven generic (no dentist assumptions).
+id: salon
+name: Beauty salon
+version: 1
+languages: [en, hi, mr]
+
+greeting:
+  en: "Hi, you've reached {business_name}. Would you like to book an appointment?"
+  hi: "नमस्ते, आपने {business_name} को कॉल किया है। क्या आप अपॉइंटमेंट बुक करना चाहेंगी?"
+  mr: "नमस्कार, तुम्ही {business_name} ला फोन केला आहे. अपॉइंटमेंट बुक करायची आहे का?"
+
+intake_questions:
+  - key: name
+    type: text
+    prompt:
+      en: "Could I get your name?"
+      hi: "आपका नाम क्या है?"
+      mr: "तुमचं नाव काय?"
+  - key: service
+    type: service
+    prompt:
+      en: "Which service would you like?"
+      hi: "आपको कौन सी सर्विस चाहिए?"
+      mr: "तुम्हाला कोणती सर्व्हिस हवी आहे?"
+  - key: stylist_preference
+    type: text
+    required: false
+    prompt:
+      en: "Do you have a preferred stylist?"
+      hi: "क्या आपकी कोई पसंदीदा स्टाइलिस्ट है?"
+      mr: "तुमची कोणी आवडती स्टायलिस्ट आहे का?"
+  - key: preferred_time
+    type: date
+    prompt:
+      en: "What day and time suits you?"
+      hi: "आपके लिए कौन सा दिन और समय ठीक रहेगा?"
+      mr: "तुम्हाला कोणता दिवस आणि वेळ सोयीचा आहे?"
+
+services:
+  - id: haircut
+    name: { en: "Haircut", hi: "हेयरकट", mr: "हेअरकट" }
+    duration_minutes: 45
+    price_inr: 500
+  - id: hair_colour
+    name: { en: "Hair colour", hi: "हेयर कलर", mr: "हेअर कलर" }
+    duration_minutes: 120
+    price_inr: 2500
+  - id: facial
+    name: { en: "Facial", hi: "फेशियल", mr: "फेशियल" }
+    duration_minutes: 60
+    price_inr: 1200
+  - id: bridal_package
+    name: { en: "Bridal package", hi: "ब्राइडल पैकेज", mr: "ब्रायडल पॅकेज" }
+    duration_minutes: 240
+    price_inr: 15000
+
+faqs:
+  - keywords: [timing, hours, open, समय, वेळ]
+    question: { en: "What are your hours?" }
+    answer: { en: "We are open {business_hours}." }
+  - keywords: [walk-in, walk in]
+    question: { en: "Do you take walk-ins?" }
+    answer: { en: "Walk-ins are welcome when a stylist is free, but booking guarantees your slot." }
+
+# No emergency section: salons have no urgent-care path. The engine must handle its absence.
+
+lead_stages: [new, contacted, booked, showed, paid, repeat, lost]

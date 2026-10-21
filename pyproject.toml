@@ -1,0 +1,38 @@
+# Virtual uv workspace root. Members are installed with `uv sync --all-packages`.
+[tool.uv.workspace]
+members = ["packages/core", "apps/api", "apps/voice-agent"]
+
+[tool.uv.sources]
+salesbot-core = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "httpx>=0.27",
+    "psycopg[binary]>=3.2",
+    "ruff>=0.8",
+    "pre-commit>=4.0",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+addopts = "-q --import-mode=importlib"
+testpaths = ["packages/core/tests", "apps/api/tests", "apps/voice-agent/tests", "supabase/tests"]
+markers = ["db: needs local Supabase running (make db-up)"]
+filterwarnings = ["ignore:.audioop. is deprecated:DeprecationWarning"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["apps/admin", "supabase/.temp"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "ASYNC", "S"]
+ignore = []
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**" = ["S101", "S105", "S106"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["salesbot_core", "salesbot_api", "salesbot_agent"]
