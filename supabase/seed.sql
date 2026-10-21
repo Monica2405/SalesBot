@@ -69,11 +69,33 @@ insert into public.calls (
   150, 2400, 600, 1800
 );
 
-insert into public.appointments (business_id, lead_id, call_id, service_id, starts_at, ends_at, value_inr)
+-- Scheduling: one practitioner (Mon-Sat 10:00-13:00 and 17:00-20:00 IST), default settings,
+-- one registered client (fake number) with a booking.
+insert into public.scheduling_settings (business_id) values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');
+
+insert into public.practitioners (id, business_id, name, display_names, consultation_minutes, first_visit_minutes)
+values ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Dr. Demo',
+        '{"hi": "डॉ. डेमो", "mr": "डॉ. डेमो"}', 20, 30);
+
+insert into public.practitioner_hours (business_id, practitioner_id, kind, weekday, start_time, end_time)
+select 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 'work', d, t.s, t.e
+from generate_series(1, 6) d, (values (time '10:00', time '13:00'), (time '17:00', time '20:00')) t(s, e);
+
+insert into public.clients (id, business_id, external_id, name, phone, preferred_language,
+                            whatsapp_opt_in, call_opt_in, consent_at, consent_source, source)
+values ('ffffffff-ffff-ffff-ffff-ffffffffffff', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'demo-1',
+        'Demo Patient', '+919999999999', 'hi', true, false, now() - interval '2 days',
+        'seed', 'simulation');
+
+insert into public.appointments (business_id, lead_id, call_id, practitioner_id, client_id,
+                                 visit_type, starts_at, ends_at, status, booked_at, booked_via,
+                                 language, value_inr)
 values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'cccccccc-cccc-cccc-cccc-cccccccccccc',
-        'dddddddd-dddd-dddd-dddd-dddddddddddd', 'cleaning',
-        date_trunc('day', now()) + interval '2 days 11 hours',
-        date_trunc('day', now()) + interval '2 days 11 hours 40 minutes', 1200);
+        'dddddddd-dddd-dddd-dddd-dddddddddddd', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
+        'ffffffff-ffff-ffff-ffff-ffffffffffff', 'first_visit',
+        date_trunc('day', now()) + interval '2 days 5 hours 30 minutes',   -- 11:00 IST
+        date_trunc('day', now()) + interval '2 days 6 hours',
+        'booked', now() - interval '1 day', 'whatsapp', 'hi', 1200);
 
 insert into public.events (business_id, type, call_id, lead_id, source, occurred_at) values
   ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'call_received', 'dddddddd-dddd-dddd-dddd-dddddddddddd', null, 'google_business', now() - interval '1 day'),
