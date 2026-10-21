@@ -29,6 +29,10 @@ class Settings(BaseSettings):
 
     telephony_provider: Literal["mock", "plivo", "exotel"] = "mock"
 
+    # Client intake (docs/INTAKE_CONTRACT.md). Shared with the owner of the registration form.
+    intake_adapter: Literal["hmac_webhook"] = "hmac_webhook"
+    intake_hmac_secret: SecretStr | None = None
+
     google_oauth_client_id: str | None = None
     google_oauth_client_secret: SecretStr | None = None
     google_oauth_redirect_uri: str | None = None
@@ -42,7 +46,6 @@ class Settings(BaseSettings):
 
     call_max_seconds: int = 600
     default_business_usage_cap_minutes: int = 500
-    recordings_bucket: str = "recordings"
 
 
 @lru_cache

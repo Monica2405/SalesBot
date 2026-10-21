@@ -31,6 +31,17 @@ class EventType(StrEnum):
     APPOINTMENT_NO_SHOW = "appointment_no_show"
     PAYMENT_RECORDED = "payment_recorded"
     CALL_ENDED = "call_ended"
+    # Appointment management (clients registered through the intake adapter)
+    CLIENT_REGISTERED = "client_registered"
+    WELCOME_SENT = "welcome_sent"
+    BOOKING_STARTED = "booking_started"
+    CONFIRMATION_SENT = "confirmation_sent"
+    APPOINTMENT_CONFIRMED = "appointment_confirmed"
+    RESCHEDULE_REQUESTED = "reschedule_requested"
+    APPOINTMENT_RESCHEDULED = "appointment_rescheduled"
+    REMINDER_SENT = "reminder_sent"
+    NO_RESPONSE = "no_response"
+    HANDOFF_TASK_CREATED = "handoff_task_created"
 
 
 # The headline funnel, in order. Conversion between consecutive stages is the core metric.
@@ -40,6 +51,14 @@ FUNNEL: tuple[EventType, ...] = (
     EventType.BOOKING_CREATED,
     EventType.APPOINTMENT_SHOWED,
     EventType.PAYMENT_RECORDED,
+)
+
+# Funnel for registered clients (appointment management): registration -> show.
+APPOINTMENT_FUNNEL: tuple[EventType, ...] = (
+    EventType.CLIENT_REGISTERED,
+    EventType.BOOKING_CREATED,
+    EventType.APPOINTMENT_CONFIRMED,
+    EventType.APPOINTMENT_SHOWED,
 )
 
 
@@ -54,6 +73,19 @@ class LeadSource(StrEnum):
     WALK_IN = "walk_in"
     ADS = "ads"
     TEST_CALL = "test_call"
+    REGISTRATION_FORM = "registration_form"
+    # Dev-only form simulator. Excluded from metrics, like TEST_CALL.
+    SIMULATION = "simulation"
+
+
+class Channel(StrEnum):
+    """How a funnel step happened. Matches events.channel and appointments.booked_via."""
+
+    WHATSAPP = "whatsapp"
+    VOICE = "voice"
+    STAFF = "staff"
+    API = "api"
+    SYSTEM = "system"
 
 
 class FunnelEvent(BaseModel):
@@ -63,6 +95,10 @@ class FunnelEvent(BaseModel):
     call_id: UUID | None = None
     lead_id: UUID | None = None
     appointment_id: UUID | None = None
+    client_id: UUID | None = None
+    channel: Channel | None = None
+    # Language of the turn or message that produced this event; "other" = unsupported language.
+    language: str | None = None
     source: LeadSource = LeadSource.UNKNOWN
     # Revenue attached to this event (INR, paise not needed at this stage)
     value_inr: int | None = None
