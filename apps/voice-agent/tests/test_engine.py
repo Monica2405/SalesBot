@@ -35,9 +35,9 @@ def test_parse_consent(answer, expected):
     assert parse_consent(answer) is expected
 
 
-def test_opening_discloses_ai_and_asks_consent():
+def test_opening_names_the_business_and_asks_consent():
     turn = make_engine().opening()
-    assert "AI assistant" in turn.say
+    assert "recorded" in turn.say
     assert "Test Clinic" in turn.say
     assert turn.events == [EventType.CALL_RECEIVED, EventType.CALL_ANSWERED]
 
@@ -86,3 +86,13 @@ async def test_emergency_falls_back_to_callback_when_handoff_unavailable():
         EventType.CALLBACK_REQUESTED,
     ]
     assert engine.handoff.requests  # handoff was attempted
+
+
+def test_fixed_voice_lines_pass_the_wording_scan():
+    from salesbot_agent.consent import OPENING
+    from salesbot_agent.handoff import CALLBACK_MESSAGE
+    from salesbot_core.text.wording import forbidden_terms
+
+    for table in (OPENING, CALLBACK_MESSAGE):
+        for language, text in table.items():
+            assert forbidden_terms(text) == [], (language, text)
