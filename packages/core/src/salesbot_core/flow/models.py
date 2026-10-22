@@ -44,6 +44,9 @@ class Reply(_Model):
     options: list[Option] = Field(default_factory=list)
     # True = not reviewed; must never reach a real patient (salesbot_core.flow.drafts).
     draft: bool = False
+    # Text a live channel sends instead while this reply is DRAFT (emergencies: numbers only,
+    # no wording). None = a DRAFT reply blocks the turn.
+    fallback: str | None = None
 
 
 class StaffTask(_Model):

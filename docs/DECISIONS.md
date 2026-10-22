@@ -89,6 +89,34 @@ another pack. Generic names in the schema: `clients` (patients), `practitioners`
     question is dropped too (2026-10-22): consent comes from registration (see above).
   - Language detection here is ours and serves text channels (WhatsApp, the console). Voice
     calls use Sarvam's own language-switch setting; we do not build a detector for voice.
+- **Languages per clinic (owner, 2026-10-22, Step 2):**
+  - Most patients write Hindi, English or Hinglish. `businesses.allowed_languages` sets what
+    a clinic offers; the default is `[en, hi]` and **Marathi is opt-in per clinic**.
+    `default_language` must be one of them.
+  - Romanized rule: a single word never switches; Hindi needs two Hindi words, or one with
+    at most one English word (so Hinglish reads as Hindi); English needs two English words
+    and no Hindi. Anything else keeps the current language (sticky).
+  - **Marathi is lower-tested.** No large Marathi word lists. Known gaps, kept as expected
+    test failures: "kal sakali 11 baje" and "छातीत दुखतंय" read as Hindi. Under review.
+  - Romanized Hindi is still answered in Devanagari. **After the pilot, consider a clinic
+    setting to reply in the patient's script** (romanized Hindi for Hinglish typists).
+  - Sarvam's text language-ID API (`POST /text-lid`, ₹3.5 per 10K characters, 1,000
+    characters max, no confidence score; latency not documented) is **not used**. It could be
+    evaluated later against our test set, **only with the owner's approval** (it spends
+    credits).
+- **Emergency safeguard (owner, 2026-10-22):** a possible emergency never gets a wrong-language
+  or generic reply.
+  - Checked before anything else, before the language is updated. The reply is in the
+    patient's last known language; if the message is clearly in another allowed language, a
+    second line in that language follows. No options, no "not understood".
+  - Every emergency reply gives the clinic phone (`businesses.contact_phone`) and the clinic's
+    emergency numbers (`businesses.emergency_numbers`, default 112 and 108). Tests fail if any
+    reply lacks one.
+  - While the emergency wording is DRAFT, live channels send a fixed fallback instead of
+    blocking: numbers and symbols only, no clinical wording (`🚑 112 / 108 · ☎ <clinic>`).
+    The urgent staff task is created either way.
+  - **Pre-launch:** the owner gets the full emergency wording (en, hi, mr) reviewed by
+    someone clinical before real patients.
 - **Every scheduling value is a per-clinic setting** (`scheduling_settings`). Defaults approved
   by the owner: slot hold 5 min, minimum lead time 60 min, lookahead 14 days, 9 days per list,
   doctor choice `any_available` (or `default_practitioner`; the form may send a doctor),

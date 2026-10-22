@@ -6,9 +6,18 @@ industry-specific logic. Adding a new industry should mean adding a YAML file, n
 
 from __future__ import annotations
 
+import re
+from string import Formatter
 from typing import Annotated, Literal
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field, model_validator
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 Language = Literal["en", "hi", "mr"]
 
@@ -92,6 +101,19 @@ class Conversation(_Strict):
     # A trailing * matches any word with that prefix: "बदल*" matches "बदलायची".
     intents: dict[Intent, list[str]]
     sincere_ask: SincereAsk
+    # Sent by live channels instead of the emergency message while that is DRAFT. Numbers and
+    # symbols only, no wording, so it is the same in every language and needs no review.
+    emergency_fallback: str
+
+    @field_validator("emergency_fallback")
+    @classmethod
+    def _numbers_only(cls, value: str) -> str:
+        names = {name for _, name, _, _ in Formatter().parse(value) if name}
+        if not {"clinic_phone", "emergency_numbers"} <= names:
+            raise ValueError("emergency_fallback needs {clinic_phone} and {emergency_numbers}")
+        if any(ch.isalpha() for ch in re.sub(r"\{[a-z_]+\}", "", value)):
+            raise ValueError("emergency_fallback must not contain words, only placeholders")
+        return value
 
 
 class Pack(_Strict):

@@ -39,7 +39,7 @@ _MR_DEVANAGARI = _words(
 )
 _HI_LATIN = _words(
     "hai hain hoon hun mujhe mera meri mere aap aapka aapki kal parso parson karna karni karo "
-    "kijiye kijie chahiye chahta chahti aur kya kab subah dopahar shaam sham raat haan han ji "
+    "kijiye kijie chahiye chahta chahti aur kya kab subah dopahar shaam sham raat haan han "
     "badalna mein baje theek thik abhi accha acha achha dijiye batao bataiye kaise kitne"
 )
 _MR_LATIN = _words(
@@ -52,7 +52,7 @@ _MR_LATIN = _words(
 # ("ok", "yes", "no", "thanks", "hi", numbers, weekday names) are deliberately absent.
 _EN_WORDS = _words(
     "i im want need book booking appointment appt tomorrow today please cancel change "
-    "reschedule time date morning afternoon evening night can could would the is are my me "
+    "reschedule time date morning afternoon evening night can could would the is are my "
     "you to for at on with doctor next week available slot what when how not help talk speak "
     "call later earlier another other day which there this that do does have has will and or "
     "but sorry sure fine good free open"
@@ -95,21 +95,39 @@ def detect(text: str) -> Detected:
     if other > deva and other > latin:
         return Detected(None, "other")
 
-    toks = set(tokens(text))
+    all_toks = tokens(text)
+    toks = set(all_toks)
     if deva >= latin:
         hi, mr = len(toks & _HI_DEVANAGARI), len(toks & _MR_DEVANAGARI)
-        script: Script = "devanagari"
-    else:
-        hi, mr = len(toks & _HI_LATIN), len(toks & _MR_LATIN)
-        script = "latin"
-    if hi > mr:
-        return Detected("hi", script)
+        if hi > mr:
+            return Detected("hi", "devanagari")
+        if mr > hi:
+            return Detected("mr", "devanagari")
+        return Detected(None, "devanagari")
+    return _detect_latin(all_toks, toks)
+
+
+def _detect_latin(all_toks: list[str], toks: set[str]) -> Detected:
+    """Romanized text: English, Hindi, Hinglish (Hindi mixed with English) or Marathi.
+
+    - A single word never switches ("kal", "haan", "tomorrow").
+    - Hindi: two Hindi words, or one Hindi word with at most one English word
+      ("appointment chahiye"). Hinglish therefore reads as Hindi.
+    - English: two English words and no Hindi or Marathi word.
+    - Anything else, e.g. one stray Hindi word in an English sentence ("can I come kal"),
+      keeps the current language.
+    Marathi keeps the simple rule (more Marathi than Hindi words); it is lower-tested.
+    """
+    if len(all_toks) < 2:
+        return Detected(None, "latin")
+    hi, mr, en = len(toks & _HI_LATIN), len(toks & _MR_LATIN), len(toks & _EN_WORDS)
     if mr > hi:
-        return Detected("mr", script)
-    # English needs a phrase, not one word: Hindi and Marathi speakers type "cancel" too.
-    if script == "latin" and hi == 0 and len(toks) >= 2 and toks & _EN_WORDS:
-        return Detected("en", script)
-    return Detected(None, script)
+        return Detected("mr", "latin")
+    if hi > mr and (hi >= 2 or en <= 1):
+        return Detected("hi", "latin")
+    if en >= 2 and hi == 0 and mr == 0:
+        return Detected("en", "latin")
+    return Detected(None, "latin")
 
 
 def requested_language(text: str) -> Language | None:

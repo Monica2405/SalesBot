@@ -63,3 +63,21 @@ def test_quiet_hours_wrap_past_midnight():
 def test_unknown_policy_keys_are_rejected():
     with pytest.raises(ValidationError):
         SchedulingSettings.model_validate({"call_policy": {"max_attempt": 3}})
+
+
+def test_languages_default_to_english_and_hindi():
+    settings = SchedulingSettings()
+    assert settings.allowed_languages == ["en", "hi"]
+    assert settings.emergency_numbers == ["112", "108"]
+
+
+def test_default_language_must_be_allowed():
+    with pytest.raises(ValidationError, match="default_language"):
+        SchedulingSettings(default_language="mr")
+    SchedulingSettings(default_language="mr", allowed_languages=["en", "hi", "mr"])
+
+
+@pytest.mark.parametrize("numbers", [[], ["112", "call 108"], ["+91 108"]])
+def test_emergency_numbers_are_digits(numbers):
+    with pytest.raises(ValidationError):
+        SchedulingSettings(emergency_numbers=numbers)

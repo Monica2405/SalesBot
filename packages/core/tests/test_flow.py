@@ -309,8 +309,10 @@ def test_emergency_at_any_step_releases_the_hold(make_chat):
 def test_emergency_in_marathi(make_chat):
     chat = make_chat()
     turn = chat.send("मला छातीत दुखतंय")
-    assert keys(turn) == ["emergency"]
-    assert turn.replies[0].language == "mr"
+    # Last known language first (the language does not switch), then Marathi.
+    assert keys(turn) == ["emergency", "emergency"]
+    assert [r.language for r in turn.replies] == ["en", "mr"]
+    assert chat.state.language == "en"
 
 
 def test_sincere_ask_answers_then_continues(make_chat):
@@ -414,6 +416,50 @@ def test_new_state_uses_the_clinic_language_for_unknown_codes(make_chat):
     assert chat.state.language == "hi"
 
 
+@pytest.mark.parametrize(
+    "text",
+    ["ok", "yes", "2", "tomorrow 11", "can I come kal", "thanks", "ji", "call me"],
+)
+def test_hindi_is_sticky_through_neutral_and_stray_words(make_chat, text):
+    chat = make_chat("hi")
+    chat.send("book")
+    turn = chat.send(text)
+    assert chat.state.language == "hi"
+    assert {r.language for r in turn.replies} <= {"hi"}
+
+
+@pytest.mark.parametrize("text", ["ok", "haan", "kal", "2", "tomorrow 11"])
+def test_english_is_sticky_through_neutral_and_stray_words(make_chat, text):
+    chat = make_chat("en")
+    chat.send("book")
+    chat.send(text)
+    assert chat.state.language == "en"
+
+
+def test_switching_between_english_and_hinglish(make_chat):
+    chat = make_chat("en")
+    turn = chat.send("mujhe kal appointment chahiye")
+    assert chat.state.language == "hi"
+    assert {r.language for r in turn.replies} == {"hi"}
+    chat.send("ok")
+    assert chat.state.language == "hi"
+    turn = chat.send("I want to book for friday please")
+    assert chat.state.language == "en"
+    assert {r.language for r in turn.replies} == {"en"}
+
+
+def test_marathi_is_off_unless_the_clinic_allows_it(make_chat):
+    chat = make_chat(settings=SchedulingSettings())  # default: en and hi
+    turn = chat.send("मला उद्या अपॉइंटमेंट हवी आहे")
+    assert turn.inbound_language == "mr"
+    assert {r.language for r in turn.replies} == {"en"}
+    chat.send("Marathi please")
+    assert chat.state.language == "en"
+    # A clinic that never offers Marathi cannot start a conversation in it either.
+    chat = make_chat("mr", settings=SchedulingSettings())
+    assert chat.state.language == "en"
+
+
 # -- DRAFT guard ---------------------------------------------------------------------------
 
 
@@ -433,8 +479,9 @@ def test_english_is_sendable_but_the_emergency_line_is_draft(make_chat):
     turn = chat.welcome()
     assert ensure_sendable(turn.replies, live=True) == turn.replies
     turn = chat.send("chest pain")
-    with pytest.raises(DraftTextBlocked):
-        ensure_sendable(turn.replies, live=True)
+    assert turn.replies[0].draft
+    # Never blocked: live channels get the numbers-only fallback (tests in test_emergency.py).
+    assert [r.key for r in ensure_sendable(turn.replies, live=True)] == ["emergency_fallback"]
 
 
 # -- pack contract -------------------------------------------------------------------------

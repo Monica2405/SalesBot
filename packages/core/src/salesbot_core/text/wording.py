@@ -77,6 +77,7 @@ def patient_texts(pack: Pack) -> Iterator[tuple[str, Language, str]]:
         for language, text in pack.emergency.message.items():
             yield "emergency.message", language, text
     if pack.conversation is not None:
+        yield "conversation.emergency_fallback", "en", pack.conversation.emergency_fallback
         for key, localized in pack.conversation.messages.items():
             for language, text in localized.items():
                 yield f"conversation.messages.{key}", language, text

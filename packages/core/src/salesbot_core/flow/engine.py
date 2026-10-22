@@ -6,9 +6,13 @@ returns a `Turn`: replies (text + options), conversation events, staff tasks and
 
 Rules that hold for every turn:
 - Every patient-facing sentence is a pack message (wording policy, docs/DECISIONS.md).
-- The reply language follows the patient's message (salesbot_core.text.language).
-- Emergencies, a request for a person, a sincere "are you a bot?" and "stop" are handled at
-  any step, before anything else.
+- The reply language follows the patient's message (salesbot_core.text.language), within the
+  languages both the pack and the clinic (`allowed_languages`) offer.
+- A possible emergency is checked first, before the language is updated: the reply is in the
+  last known language (plus the message's language when that is clear and different), always
+  carries the clinic phone and emergency numbers, and has a numbers-only fallback for live
+  channels while the wording is DRAFT.
+- A request for a person, a sincere "are you a bot?" and "stop" are handled at any step.
 - A held slot is released whenever the patient leaves the confirmation step.
 - Booking events are written by the booking engine behind the port; this engine only emits
   conversation events (booking_started, question_unanswered, handoff ...).
@@ -74,8 +78,13 @@ REQUIRED_MESSAGES = frozenset(
 )  # fmt: skip
 # Placeholders the engine fills. Pack messages may use only these.
 PLACEHOLDERS = frozenset(
-    {"business_name", "client_name", "doctor", "date", "time", "days", "clinic_phone"}
-)
+    {
+        "business_name", "client_name", "doctor", "date", "time", "days", "clinic_phone",
+        "emergency_numbers",
+    }
+)  # fmt: skip
+# Every emergency reply must carry these, in every language.
+EMERGENCY_PLACEHOLDERS = frozenset({"clinic_phone", "emergency_numbers"})
 SINCERE_ASK_KEY = "sincere_ask"
 # WhatsApp list messages hold at most 10 rows: 8 times + "later times" + "another day".
 TIMES_PER_PAGE = 8
@@ -89,7 +98,8 @@ class FlowContext:
     client_name: str
     # The clinic's default language: replies to unsupported languages use it.
     default_language: Language = "en"
-    # Business values for placeholders, e.g. {"clinic_phone": "+91..."}.
+    # Business values for placeholders. "clinic_phone" (the clinic's number for patients) is
+    # required: every emergency reply gives it.
     values: dict[str, str] = field(default_factory=dict)
     # Staff took over this client: the engine stays silent.
     automation_paused: bool = False
@@ -106,6 +116,18 @@ class FlowEngine:
         missing = REQUIRED_MESSAGES - set(pack.conversation.messages)
         if missing:
             raise ValueError(f"pack {pack.id!r} is missing messages: {sorted(missing)}")
+        for language, text in pack.conversation.messages["emergency"].items():
+            if not placeholders(text) >= EMERGENCY_PLACEHOLDERS:
+                raise ValueError(
+                    f"pack {pack.id!r}: emergency message ({language}) needs "
+                    f"{sorted(EMERGENCY_PLACEHOLDERS)}"
+                )
+        if not ctx.values.get("clinic_phone"):
+            raise ValueError("FlowContext.values needs clinic_phone (emergency replies give it)")
+        allowed = port.settings.allowed_languages
+        self.languages: list[Language] = [lang for lang in pack.languages if lang in allowed]
+        if not self.languages:
+            raise ValueError(f"pack {pack.id!r} offers none of the clinic's languages {allowed}")
         self.pack = pack
         self.conversation = pack.conversation
         self.port = port
@@ -113,8 +135,9 @@ class FlowEngine:
         self.tz = ZoneInfo(port.settings.timezone)
 
     def new_state(self, language: Language) -> ConversationState:
-        if language not in self.pack.languages:
-            language = self.ctx.default_language
+        if language not in self.languages:
+            fallback = self.ctx.default_language
+            language = fallback if fallback in self.languages else self.languages[0]
         return ConversationState(language=language)
 
     # -- outbound starters (welcome after intake, confirmation requests, reminders) ------
@@ -174,12 +197,13 @@ class _Session:
 
     # -- text ---------------------------------------------------------------------------
 
-    def _text(self, key: str) -> tuple[str, Language]:
+    def _text(self, key: str, language: Language | None = None) -> tuple[str, Language]:
         if key == SINCERE_ASK_KEY:
             localized = self.e.conversation.sincere_ask.answer
         else:
             localized = self.e.conversation.messages[key]
-        language = self.state.language if self.state.language in localized else "en"
+        wanted = language or self.state.language
+        language = wanted if wanted in localized else "en"
         return localized[language], language
 
     def _values(self, extra: dict[str, str]) -> dict[str, str]:
@@ -187,6 +211,7 @@ class _Session:
             "business_name": self.e.ctx.business_name,
             "client_name": self.e.ctx.client_name,
             "days": str(self.e.port.settings.lookahead_days),
+            "emergency_numbers": " / ".join(self.e.port.settings.emergency_numbers),
             **self.e.ctx.values,
             **extra,
         }
@@ -194,14 +219,30 @@ class _Session:
     def option(self, option_id: str, key: str) -> Option:
         return Option(id=option_id, label=self._text(key)[0])
 
-    def say(self, key: str, options: list[Option] | None = None, **values: str) -> None:
-        template, language = self._text(key)
-        text = template.format_map(self._values(values))
+    def say(
+        self,
+        key: str,
+        options: list[Option] | None = None,
+        *,
+        in_language: Language | None = None,
+        fallback: str | None = None,
+        **values: str,
+    ) -> None:
+        template, language = self._text(key, in_language)
+        filled = self._values(values)
+        text = template.format_map(filled)
         draft = self.e.pack.is_draft(language, key) or (
             key == SINCERE_ASK_KEY and self.e.conversation.sincere_ask.draft
         )
         self.replies.append(
-            Reply(key=key, text=text, language=language, options=options or [], draft=draft)
+            Reply(
+                key=key,
+                text=text,
+                language=language,
+                options=options or [],
+                draft=draft,
+                fallback=fallback.format_map(filled) if fallback else None,
+            )
         )
         self.state.offered = list(options or [])
 
@@ -238,11 +279,18 @@ class _Session:
 
     def receive(self, inbound: Inbound) -> None:
         text = inbound.text.strip()
-        detected = detect(text) if text and inbound.choice is None else Detected(None, "none")
+        typed = bool(text) and inbound.choice is None
+        detected = detect(text) if typed else Detected(None, "none")
         self.inbound_language = recorded_language(detected)
 
-        requested = requested_language(text) if text and inbound.choice is None else None
-        if requested is not None and requested in self.e.pack.languages:
+        # Before anything else, and before the language changes (patient safety).
+        if typed and self.e.pack.emergency and matches_any(text, self.e.pack.emergency.triggers):
+            self.on_emergency(detected)
+            self.state.misses = 0
+            return
+
+        requested = requested_language(text) if typed else None
+        if requested is not None and requested in self.e.languages:
             self.state.language = requested
             self.say("language_switched")
             self.reprompt()
@@ -250,7 +298,7 @@ class _Session:
         self.state.language = reply_language(
             detected,
             self.state.language,
-            supported=self.e.pack.languages,
+            supported=self.e.languages,
             fallback=self.e.ctx.default_language,
         )
 
@@ -266,9 +314,6 @@ class _Session:
         if not text:
             return
 
-        if self.e.pack.emergency and matches_any(text, self.e.pack.emergency.triggers):
-            self.on_emergency()
-            return
         if matches_any(text, self.e.conversation.sincere_ask.triggers):
             self.say(SINCERE_ASK_KEY, [self.option("human", "opt_human")])
             self.reprompt()
@@ -385,9 +430,15 @@ class _Session:
 
     # -- interrupts ---------------------------------------------------------------------
 
-    def on_emergency(self) -> None:
+    def on_emergency(self, detected: Detected) -> None:
+        """Reply in the last known language; the conversation language does not change. If
+        the message is clearly in another language the clinic offers, add that language too."""
         self.reset()
-        self.say("emergency")
+        fallback = self.e.conversation.emergency_fallback
+        self.say("emergency", fallback=fallback)
+        other = detected.language
+        if other is not None and other != self.state.language and other in self.e.languages:
+            self.say("emergency", in_language=other, fallback=fallback)
         self.tasks.append(StaffTask(kind="emergency", reason="emergency words", urgent=True))
         self.event(EventType.EMERGENCY_DETECTED)
         self.event(EventType.HANDOFF_REQUESTED, reason="emergency")
@@ -865,4 +916,10 @@ def _asked_time(slots: list[Slot], clock: ClockTime, tz: ZoneInfo) -> datetime:
     return datetime.combine(day, time(best.hour, best.minute), tz)
 
 
-__all__ = ["REQUIRED_MESSAGES", "FlowContext", "FlowEngine", "placeholders"]
+__all__ = [
+    "EMERGENCY_PLACEHOLDERS",
+    "REQUIRED_MESSAGES",
+    "FlowContext",
+    "FlowEngine",
+    "placeholders",
+]

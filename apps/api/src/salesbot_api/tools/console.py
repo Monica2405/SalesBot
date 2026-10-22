@@ -96,7 +96,13 @@ def build_scheduling(clinic: ClinicIn) -> InMemoryScheduling:
     if default_name is not None:
         values["default_practitioner_id"] = ids[default_name]
     settings = SchedulingSettings.model_validate(
-        {**values, "timezone": clinic.timezone, "default_language": clinic.default_language}
+        {
+            **values,
+            "timezone": clinic.timezone,
+            "default_language": clinic.default_language,
+            "allowed_languages": clinic.allowed_languages,
+            "emergency_numbers": clinic.emergency_numbers,
+        }
     )
     names = {ids[p.name]: {"en": p.name, **p.display_names} for p in clinic.practitioners}
     return InMemoryScheduling(settings=settings, calendars=calendars, names=names)
@@ -112,7 +118,7 @@ class Console:
                 business_name=clinic.name,
                 client_name=patient,
                 default_language=clinic.default_language,
-                values={"clinic_phone": "+910000000000"},
+                values={"clinic_phone": clinic.contact_phone},
             ),
         )
         self.state: ConversationState = self.engine.new_state(language)  # type: ignore[arg-type]

@@ -77,6 +77,11 @@ class ClinicIn(_Strict):
     pack: str = "clinic"
     timezone: str = "Asia/Kolkata"
     default_language: Language = "en"
+    # Marathi is opt-in per clinic (docs/DECISIONS.md).
+    allowed_languages: list[Language] = Field(default_factory=lambda: ["en", "hi"], min_length=1)
+    # Given in every emergency reply. contact_phone is the clinic's number for patients.
+    emergency_numbers: list[str] = Field(default_factory=lambda: ["112", "108"], min_length=1)
+    contact_phone: str = Field(pattern=r"^\+?[0-9]{6,15}$")
     settings: dict[str, Any] = Field(default_factory=dict)
     practitioners: list[PractitionerIn] = Field(min_length=1)
     closures: list[Closure] = Field(default_factory=list)
@@ -87,13 +92,26 @@ def load(conn: Any, clinic: ClinicIn) -> Any:
     with conn.transaction():
         bid = conn.execute(
             """
-            insert into public.businesses (name, slug, pack_id, timezone, default_language)
-            values (%s, %s, %s, %s, %s)
+            insert into public.businesses (name, slug, pack_id, timezone, default_language,
+              allowed_languages, emergency_numbers, contact_phone)
+            values (%s, %s, %s, %s, %s, %s, %s, %s)
             on conflict (slug) do update set name = excluded.name, pack_id = excluded.pack_id,
-              timezone = excluded.timezone, default_language = excluded.default_language
+              timezone = excluded.timezone, default_language = excluded.default_language,
+              allowed_languages = excluded.allowed_languages,
+              emergency_numbers = excluded.emergency_numbers,
+              contact_phone = excluded.contact_phone
             returning id
             """,
-            (clinic.name, clinic.slug, clinic.pack, clinic.timezone, clinic.default_language),
+            (
+                clinic.name,
+                clinic.slug,
+                clinic.pack,
+                clinic.timezone,
+                clinic.default_language,
+                clinic.allowed_languages,
+                clinic.emergency_numbers,
+                clinic.contact_phone,
+            ),
         ).fetchone()["id"]
 
         ids: dict[str, Any] = {}

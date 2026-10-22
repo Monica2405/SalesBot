@@ -6,7 +6,9 @@ and Marathi line until a native speaker reviews it. Packs mark it with `draft_la
 
 Every live channel adapter must pass outgoing replies through `ensure_sendable` with
 `live=True`. It fails closed: a DRAFT reply raises instead of being sent, and the adapter falls
-back to a staff task. Only the dev console and simulations pass `live=False`.
+back to a staff task. The one exception is a DRAFT reply with a `fallback` (emergencies): the
+numbers-only fallback is sent instead, so a possible emergency is never left unanswered. Only
+the dev console and simulations pass `live=False`.
 """
 
 from __future__ import annotations
@@ -27,15 +29,24 @@ class DraftTextBlocked(Exception):
 
 
 def ensure_sendable(replies: Iterable[Reply], *, live: bool) -> list[Reply]:
-    """Return the replies unchanged, or raise DraftTextBlocked on the first DRAFT one when live.
+    """The replies to send. When live, a DRAFT reply is replaced by its fallback (identical
+    fallbacks are sent once), or raises DraftTextBlocked if it has none.
 
     All-or-nothing: a turn is never sent half."""
     replies = list(replies)
-    if live:
-        for reply in replies:
-            if reply.draft:
-                raise DraftTextBlocked(reply)
-    return replies
+    if not live:
+        return replies
+    out: list[Reply] = []
+    for reply in replies:
+        if not reply.draft:
+            out.append(reply)
+            continue
+        if reply.fallback is None:
+            raise DraftTextBlocked(reply)
+        if any(sent.text == reply.fallback for sent in out):
+            continue
+        out.append(Reply(key=f"{reply.key}_fallback", text=reply.fallback, language=reply.language))
+    return out
 
 
 def draft_texts(pack: Pack) -> Iterator[tuple[str, Language, str]]:

@@ -64,7 +64,7 @@ def test_romanized_time_requests(text, language):
 
 @pytest.mark.xfail(
     strict=True,
-    reason="known bug (Step 2): kal and baje count as Hindi and outvote Marathi sakali",
+    reason="Marathi detection is a known gap, under review: kal and baje count as Hindi",
 )
 def test_romanized_marathi_with_shared_words():
     assert detect("kal sakali 11 baje").language == "mr"
@@ -118,7 +118,62 @@ def test_language_the_pack_does_not_offer():
 
 @pytest.mark.xfail(
     strict=True,
-    reason="known gap (Step 2): Marathi verb forms like दुखतंय are not in the word list",
+    reason="Marathi detection is a known gap, under review: verb forms like दुखतंय are unlisted",
 )
 def test_marathi_without_listed_words():
     assert detect("छातीत दुखतंय").language == "mr"
+
+
+# -- Hindi vs English vs Hinglish (romanized) -----------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "mujhe kal appointment chahiye",
+        "kya kal slot available hai",
+        "kal aa sakte hai",
+        "appointment chahiye",
+        "kal please",
+        "aaj shaam ko time hai kya",
+        "doctor se baat karni hai",
+    ],
+)
+def test_hinglish_reads_as_hindi(text):
+    assert detect(text) == Detected("hi", "latin")
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "I want to book an appointment",
+        "book tomorrow",
+        "is there a slot on friday",
+        "please change my appointment",
+    ],
+)
+def test_english_needs_two_english_words(text):
+    assert detect(text) == Detected("en", "latin")
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        # One Hindi word inside an English sentence: a stray word, not a switch.
+        "can I come kal",
+        "is the doctor free kal",
+        # A single word never switches, whatever the language.
+        "kal",
+        "haan",
+        "tomorrow",
+        "thanks",
+        # One English word and nothing else clear.
+        "tomorrow 11",
+        "call me",
+        # Words common to both languages are not evidence.
+        "ji",
+        "ok ji",
+    ],
+)
+def test_stray_words_keep_the_current_language(text):
+    assert detect(text).language is None

@@ -96,7 +96,8 @@ def make_chat() -> ChatFactory:
         paused: bool = False,
     ) -> Chat:
         port = port or InMemoryScheduling(
-            settings=settings or SchedulingSettings(),
+            # Test clinics offer all three languages unless a test passes its own settings.
+            settings=settings or SchedulingSettings(allowed_languages=["en", "hi", "mr"]),
             calendars=clinic_calendars(),
             names=NAMES,
         )

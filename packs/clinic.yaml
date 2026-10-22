@@ -42,33 +42,71 @@ services:
 emergency:
   action: handoff
   triggers:
+    # English
     - "emergency"
     - "chest pain"
     - "can't breathe"
+    - "cant breathe"
     - "cannot breathe"
+    - "not breathing"
+    - "difficulty breathing"
     - "breathing problem"
+    - "short of breath"
     - "unconscious"
     - "fainted"
+    - "fainting"
+    - "passed out"
     - "heavy bleeding"
+    - "bleeding a lot"
+    - "bleeding heavily"
+    - "won't stop bleeding"
+    - "wont stop bleeding"
     - "severe pain"
+    - "unbearable pain"
     - "accident"
     - "seizure"
     - "heart attack"
     - "stroke"
     - "poison"
+    # Hindi (Devanagari)
     - "इमरजेंसी"
     - "सीने में दर्द"
     - "छाती में दर्द"
     - "सांस नहीं"
     - "साँस नहीं"
+    - "सांस लेने में"
+    - "साँस लेने में"
     - "बेहोश"
     - "बहुत खून"
+    - "खून बह"
+    - "खून निकल"
+    - "बहुत तेज दर्द"
+    - "असहनीय दर्द"
     - "एक्सीडेंट"
     - "दुर्घटना"
     - "दिल का दौरा"
     - "जहर"
-    - "behosh"
+    # Hindi (romanized / Hinglish)
+    - "emergency hai"
+    - "seene mein dard"
+    - "seene me dard"
+    - "sine mein dard"
+    - "sine me dard"
+    - "chhati mein dard"
+    - "chhati me dard"
+    - "chati mein dard"
+    - "chati me dard"
     - "saans nahi"
+    - "sans nahi"
+    - "saans lene"
+    - "sans lene"
+    - "khoon beh"
+    - "khoon nikal"
+    - "bahut khoon"
+    - "behosh"
+    - "bahut tez dard"
+    - "bahut zyada dard"
+    - "dil ka daura"
     - "आणीबाणी"
     - "छातीत दुख*"
     - "श्वास घेता येत नाही"
@@ -79,6 +117,11 @@ emergency:
     - "विष"
     - "beshuddh"
     - "apghat"
+    # Marathi (lower-tested)
+    - "chhatit dukh*"
+    - "chatit dukh*"
+    - "shwas gheta yet nahi"
+    - "khup rakt"
   message:
     en: "That sounds urgent. Please call the clinic right away, or go to the nearest hospital."
     hi: "यह ज़रूरी लग रहा है। कृपया अभी क्लिनिक को कॉल करें या नज़दीकी अस्पताल जाएँ।"
@@ -87,6 +130,10 @@ emergency:
 lead_stages: [new, contacted, booked, confirmed, showed, no_show, lost]
 
 conversation:
+  # Live channels send this while the emergency message is DRAFT (clinical review pending).
+  # Numbers and symbols only, so it needs no review and reads the same in every language.
+  emergency_fallback: "🚑 {emergency_numbers} · ☎ {clinic_phone}"
+
   sincere_ask:
     draft: true
     triggers:
@@ -265,9 +312,9 @@ conversation:
       hi: "ठीक है। क्लिनिक की टीम जल्द ही इसी नंबर पर आपसे संपर्क करेगी।"
       mr: "ठीक आहे. क्लिनिकची टीम लवकरच याच नंबरवर तुमच्याशी संपर्क करेल."
     emergency:
-      en: "This sounds urgent. Please call the clinic now on {clinic_phone}. In a medical emergency, call 108 or go to the nearest hospital."
-      hi: "यह ज़रूरी लग रहा है। कृपया अभी क्लिनिक को {clinic_phone} पर कॉल करें। मेडिकल इमरजेंसी में 108 पर कॉल करें या नज़दीकी अस्पताल जाएँ।"
-      mr: "हे तातडीचं वाटतंय. कृपया आत्ताच क्लिनिकला {clinic_phone} वर फोन करा. वैद्यकीय आणीबाणीत 108 वर फोन करा किंवा जवळच्या रुग्णालयात जा."
+      en: "This sounds urgent. Please call the clinic now on {clinic_phone}. In a medical emergency, call {emergency_numbers} or go to the nearest hospital."
+      hi: "यह ज़रूरी लग रहा है। कृपया अभी क्लिनिक को {clinic_phone} पर कॉल करें। मेडिकल इमरजेंसी में {emergency_numbers} पर कॉल करें या नज़दीकी अस्पताल जाएँ।"
+      mr: "हे तातडीचं वाटतंय. कृपया आत्ताच क्लिनिकला {clinic_phone} वर फोन करा. वैद्यकीय आणीबाणीत {emergency_numbers} वर फोन करा किंवा जवळच्या रुग्णालयात जा."
     language_switched:
       en: "Sure, we will continue in English."
       hi: "ज़रूर, अब हिंदी में बात करते हैं।"
