@@ -53,6 +53,32 @@ Unknown fields are rejected (`422`), so typos never pass silently.
 }
 ```
 
+## Consent wording the form must show (for the form owner)
+
+Calls to and from the clinic may be **recorded** by our voice provider (Sarvam). The call
+itself does not ask for recording consent, so the registration form must. `call_opt_in: true`
+means the patient agreed to the text below, including recording, and Anvia sets
+`calls.consent_recording` from it (with `consent_at` and `consent_source`). Change the
+`consent_source` value whenever the wording changes, so every patient's consent can be traced
+to the exact text they saw.
+
+Required points, in the patient's language:
+1. The clinic may contact them on WhatsApp and by phone about their appointments
+   (booking, confirmations, reminders, changes).
+2. Phone calls may be recorded and transcribed, to manage appointments and improve service.
+3. Their data is handled by the clinic and its service providers, and they can withdraw
+   consent at any time (how: e.g. reply STOP, or ask the clinic).
+
+**DRAFT wording (English), not yet legally reviewed:**
+
+> I agree that {clinic name} may contact me on WhatsApp and by phone about my appointments.
+> Calls may be recorded and transcribed to manage my appointments and improve service. I can
+> withdraw this consent at any time by replying STOP or by telling the clinic.
+
+Hindi and Marathi versions need a native speaker and the same legal review. **Until the
+wording is agreed (docs/DECISIONS.md, "Data retention and DPDP compliance"), voice testing is
+on the owner's team's phones only, and no real patient is called.**
+
 ## Signature
 
 ```
