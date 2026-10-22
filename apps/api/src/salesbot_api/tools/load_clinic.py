@@ -34,7 +34,7 @@ class _Strict(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-def _parse_ranges(value: list[str]) -> list[tuple[time, time]]:
+def parse_ranges(value: list[str]) -> list[tuple[time, time]]:
     out = []
     for r in value:
         start, end = (time.fromisoformat(x.strip()) for x in r.split("-"))
@@ -60,7 +60,7 @@ class PractitionerIn(_Strict):
         if unknown:
             raise ValueError(f"unknown weekday keys {sorted(unknown)}; use {list(DAYS)}")
         for ranges in v.values():
-            _parse_ranges(ranges)
+            parse_ranges(ranges)
         return v
 
 
@@ -127,7 +127,7 @@ def load(conn: Any, clinic: ClinicIn) -> Any:
             conn.execute("delete from public.practitioner_hours where practitioner_id = %s", (pid,))
             for kind, table in (("work", p.hours), ("break", p.breaks)):
                 for day, ranges in table.items():
-                    for start, end in _parse_ranges(ranges):
+                    for start, end in parse_ranges(ranges):
                         conn.execute(
                             "insert into public.practitioner_hours (business_id, "
                             "practitioner_id, kind, weekday, start_time, end_time) "
