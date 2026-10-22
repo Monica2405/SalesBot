@@ -40,6 +40,7 @@ class Settings(BaseSettings):
     whatsapp_provider: str = "mock"
     whatsapp_access_token: SecretStr | None = None
     whatsapp_phone_number_id: str | None = None
+    whatsapp_business_account_id: str | None = None
 
     hubspot_enabled: bool = False
     hubspot_access_token: SecretStr | None = None
