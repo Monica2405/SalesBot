@@ -3,6 +3,8 @@ id: salon
 name: Beauty salon
 version: 1
 languages: [en, hi, mr]
+# Hindi and Marathi are DRAFT until a native speaker reviews them.
+draft_languages: [hi, mr]
 
 greeting:
   en: "Hi, you've reached {business_name}. Would you like to book an appointment?"

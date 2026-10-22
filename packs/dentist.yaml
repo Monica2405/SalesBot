@@ -4,6 +4,8 @@ id: dentist
 name: Dental clinic
 version: 1
 languages: [en, hi, mr]
+# Hindi and Marathi are DRAFT until a native speaker reviews them.
+draft_languages: [hi, mr]
 
 greeting:
   en: "Hello, thank you for calling {business_name}. How can I help you today?"

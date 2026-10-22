@@ -1,0 +1,293 @@
+# Industry pack: clinic (appointment management for registered patients, Anvia Phase 1).
+# Pure config, validated by salesbot_core.packs.schema.Pack. Clinic-specific values (name,
+# doctors, hours, phone) live in the database, not here.
+#
+# Wording policy (docs/DECISIONS.md): patient-facing text never mentions AI, bots, virtual or
+# automated assistants and never claims to be a person or staff member. The only exception is
+# conversation.sincere_ask.answer. Enforced by packages/core/tests/test_wording.py.
+#
+# DRAFT: every Hindi and Marathi line until a native speaker reviews it, the sincere-ask answer,
+# and the emergency message (needs clinical sign-off). DRAFT text is never sent to real patients.
+id: clinic
+name: Clinic
+version: 1
+languages: [en, hi, mr]
+draft_languages: [hi, mr]
+draft_messages: [emergency]
+
+# Voice greeting (inbound calls).
+greeting:
+  en: "Hello, thank you for calling {business_name}. How can we help you today?"
+  hi: "नमस्ते, {business_name} में कॉल करने के लिए धन्यवाद। हम आपकी क्या मदद कर सकते हैं?"
+  mr: "नमस्कार, {business_name} मध्ये फोन केल्याबद्दल धन्यवाद. आम्ही तुमची काय मदत करू शकतो?"
+
+# Patients register through the intake form (docs/INTAKE_CONTRACT.md); calls only ask when.
+intake_questions:
+  - key: preferred_time
+    type: date
+    prompt:
+      en: "When would you like to come in?"
+      hi: "आप कब आना चाहेंगे?"
+      mr: "तुम्हाला कधी यायला आवडेल?"
+
+# Indicative only: visit lengths are set per doctor in the clinic setup.
+services:
+  - id: first_visit
+    name: { en: "First visit", hi: "पहली विज़िट", mr: "पहिली भेट" }
+    duration_minutes: 30
+  - id: consultation
+    name: { en: "Consultation", hi: "परामर्श", mr: "सल्ला" }
+    duration_minutes: 15
+
+emergency:
+  action: handoff
+  triggers:
+    - "emergency"
+    - "chest pain"
+    - "can't breathe"
+    - "cannot breathe"
+    - "breathing problem"
+    - "unconscious"
+    - "fainted"
+    - "heavy bleeding"
+    - "severe pain"
+    - "accident"
+    - "seizure"
+    - "heart attack"
+    - "stroke"
+    - "poison"
+    - "इमरजेंसी"
+    - "सीने में दर्द"
+    - "छाती में दर्द"
+    - "सांस नहीं"
+    - "साँस नहीं"
+    - "बेहोश"
+    - "बहुत खून"
+    - "एक्सीडेंट"
+    - "दुर्घटना"
+    - "दिल का दौरा"
+    - "जहर"
+    - "behosh"
+    - "saans nahi"
+    - "आणीबाणी"
+    - "छातीत दुख*"
+    - "श्वास घेता येत नाही"
+    - "दम लागत*"
+    - "बेशुद्ध"
+    - "खूप रक्त"
+    - "अपघात"
+    - "विष"
+    - "beshuddh"
+    - "apghat"
+  message:
+    en: "That sounds urgent. Please call the clinic right away, or go to the nearest hospital."
+    hi: "यह ज़रूरी लग रहा है। कृपया अभी क्लिनिक को कॉल करें या नज़दीकी अस्पताल जाएँ।"
+    mr: "हे तातडीचं वाटतंय. कृपया लगेच क्लिनिकला फोन करा किंवा जवळच्या रुग्णालयात जा."
+
+lead_stages: [new, contacted, booked, confirmed, showed, no_show, lost]
+
+conversation:
+  sincere_ask:
+    draft: true
+    triggers:
+      - "are you a bot"
+      - "are you human"
+      - "are you a human"
+      - "are you a robot"
+      - "are you real"
+      - "is this a bot"
+      - "is this automated"
+      - "am i talking to a bot"
+      - "am i talking to a person"
+      - "am i talking to a real person"
+      - "bot"
+      - "chatbot"
+      - "robot"
+      - "ai"
+      - "machine"
+      - "computer"
+      - "kya aap bot"
+      - "bot ho"
+      - "robot ho"
+      - "insaan ho"
+      - "बॉट"
+      - "रोबोट"
+      - "मशीन"
+      - "क्या आप इंसान"
+      - "इंसान हो"
+      - "तुम्ही माणूस"
+      - "माणूस आहात"
+      - "manus ahat"
+    answer:
+      en: "This is {business_name}'s automated appointment service. For anything else, choose Talk to clinic."
+      hi: "यह {business_name} की स्वचालित अपॉइंटमेंट सेवा है। किसी और काम के लिए 'क्लिनिक से बात करें' चुनें।"
+      mr: "ही {business_name} ची स्वयंचलित अपॉइंटमेंट सेवा आहे. इतर कशासाठीही 'क्लिनिकशी बोला' निवडा."
+
+  intents:
+    book: [book, booking, appointment, "appoint*", slot, visit, "see the doctor", "बुक*",
+           "अपॉइंटमेंट", "appointment chahiye", dikhana, "दिखाना", "भेट", bhet, milna, "मिलना"]
+    reschedule: ["reschedul*", change, move, postpone, prepone, "another time", "different time",
+                 "badal*", "बदल*", "pudhe", "पुढे ढकल*"]
+    cancel: ["cancel*", cancle, "radd*", "रद्द", "कैंसल", "कॅन्सल", "nahi aana", "नहीं आना",
+             "नाही येणार", "nahi yenar"]
+    "yes": ["yes", yeah, yep, ya, yup, "ok", okay, sure, "confirm*", done, haan, han, haa,
+            "हाँ", "हां", ji, "जी", theek, thik, "ठीक", "kar do", "कर दो", "ho", hoy, "होय",
+            "हो", chalel, "चालेल", kara, "करा", barobar, "बरोबर", "कन्फ*"]
+    "no": ["no", nope, nah, "not now", nahi, nahin, "नहीं", "नही", mat, "मत", nako, "नको",
+           "नाही", "rehne do", "रहने दो", "rahu dya", "राहू द्या", keep]
+    human: [human, person, "real person", staff, receptionist, "talk to", "speak to",
+            "call me", "call back", callback, manager, "doctor se baat", "baat kar*",
+            "बात कर*", "phone karo", "call karo", "फोन करो", "कॉल करो", "फोन करा", "कॉल करा",
+            bolaycha, "बोलायचं", "बोलायचे"]
+    menu: [menu, hi, hello, hey, namaste, "नमस्ते", "नमस्कार", namaskar, help, start, options,
+           "मदद", madad]
+    more: [more, later, aur, "और", aankhi, "आणखी", next, baad, "बाद"]
+    thanks: [thanks, "thank you", thx, ty, dhanyavad, dhanyawad, "धन्यवाद", shukriya, "शुक्रिया",
+             "great", "👍", "🙏"]
+    stop: [stop, unsubscribe, "band karo", "बंद करो", "बंद करा", "band kara", "मेसेज बंद",
+           "mat bhejo", "मत भेजो", "पाठवू नका", "pathvu naka"]
+
+  messages:
+    welcome:
+      en: "Hello {client_name}, welcome to {business_name}. Would you like to book your first visit?"
+      hi: "नमस्ते {client_name}, {business_name} में आपका स्वागत है। क्या आप अपनी पहली विज़िट बुक करना चाहेंगे?"
+      mr: "नमस्कार {client_name}, {business_name} मध्ये तुमचं स्वागत आहे. तुमची पहिली भेट बुक करायची आहे का?"
+    not_now:
+      en: "No problem. Message us any time to book."
+      hi: "कोई बात नहीं। बुक करने के लिए कभी भी मैसेज करें।"
+      mr: "काही हरकत नाही. बुक करण्यासाठी कधीही मेसेज करा."
+    menu:
+      en: "How can we help you?"
+      hi: "हम आपकी क्या मदद कर सकते हैं?"
+      mr: "आम्ही तुमची काय मदत करू शकतो?"
+    ask_day:
+      en: "Which day suits you? These days have free times."
+      hi: "आपको कौन-सा दिन ठीक रहेगा? इन दिनों में समय खाली है।"
+      mr: "तुम्हाला कोणता दिवस सोयीचा आहे? या दिवशी वेळ उपलब्ध आहे."
+    day_full:
+      en: "There are no free times on {date}. These days have free times."
+      hi: "{date} को कोई समय खाली नहीं है। इन दिनों में समय खाली है।"
+      mr: "{date} रोजी वेळ उपलब्ध नाही. या दिवशी वेळ उपलब्ध आहे."
+    no_openings_soon:
+      en: "There are no free times in the next {days} days. The earliest is {date} at {time} with {doctor}. Shall I book it?"
+      hi: "अगले {days} दिनों में कोई समय खाली नहीं है। सबसे पहला समय {date}, {time} है, {doctor} के साथ। क्या इसे बुक कर दें?"
+      mr: "पुढील {days} दिवसांत वेळ उपलब्ध नाही. सर्वात लवकरची वेळ {date}, {time} आहे, {doctor} यांच्याकडे. बुक करायची का?"
+    no_openings:
+      en: "Sorry, there are no free times right now. The clinic team will contact you soon."
+      hi: "माफ़ कीजिए, अभी कोई समय खाली नहीं है। क्लिनिक की टीम जल्द ही आपसे संपर्क करेगी।"
+      mr: "माफ करा, सध्या वेळ उपलब्ध नाही. क्लिनिकची टीम लवकरच तुमच्याशी संपर्क करेल."
+    ask_time:
+      en: "Free times on {date}:"
+      hi: "{date} को खाली समय:"
+      mr: "{date} रोजी उपलब्ध वेळा:"
+    time_not_free:
+      en: "{time} is not free on {date}. The nearest free times are:"
+      hi: "{date} को {time} खाली नहीं है। सबसे नज़दीकी खाली समय:"
+      mr: "{date} रोजी {time} उपलब्ध नाही. जवळच्या उपलब्ध वेळा:"
+    confirm_slot:
+      en: "{doctor}, {date} at {time}. Shall I book it?"
+      hi: "{doctor}, {date}, {time}। क्या इसे बुक कर दें?"
+      mr: "{doctor}, {date}, {time}. बुक करायची का?"
+    booked:
+      en: "Your appointment is booked: {doctor}, {date} at {time}."
+      hi: "आपका अपॉइंटमेंट बुक हो गया है: {doctor}, {date}, {time}।"
+      mr: "तुमची अपॉइंटमेंट बुक झाली आहे: {doctor}, {date}, {time}."
+    slot_lost:
+      en: "Sorry, that time was just taken. Other free times on {date}:"
+      hi: "माफ़ कीजिए, वह समय अभी-अभी बुक हो गया। {date} को दूसरे खाली समय:"
+      mr: "माफ करा, ती वेळ आत्ताच बुक झाली. {date} रोजी इतर उपलब्ध वेळा:"
+    pick_again:
+      en: "Okay. Other free times on {date}:"
+      hi: "ठीक है। {date} को दूसरे खाली समय:"
+      mr: "ठीक आहे. {date} रोजी इतर उपलब्ध वेळा:"
+    abandon_booking:
+      en: "Okay, nothing is booked. Message us any time to book."
+      hi: "ठीक है, कुछ भी बुक नहीं किया गया। बुक करने के लिए कभी भी मैसेज करें।"
+      mr: "ठीक आहे, काहीही बुक केलेलं नाही. बुक करण्यासाठी कधीही मेसेज करा."
+    reschedule_none:
+      en: "You have no upcoming appointment to change. Would you like to book one?"
+      hi: "आपका कोई आने वाला अपॉइंटमेंट नहीं है जिसे बदला जा सके। क्या आप नया बुक करना चाहेंगे?"
+      mr: "बदलण्यासाठी तुमची कोणतीही आगामी अपॉइंटमेंट नाही. नवीन बुक करायची आहे का?"
+    reschedule_start:
+      en: "Your appointment is {doctor}, {date} at {time}. Which new day suits you?"
+      hi: "आपका अपॉइंटमेंट {doctor}, {date}, {time} है। नया दिन कौन-सा ठीक रहेगा?"
+      mr: "तुमची अपॉइंटमेंट {doctor}, {date}, {time} आहे. नवीन कोणता दिवस सोयीचा आहे?"
+    rescheduled:
+      en: "Done. Your appointment is moved to {doctor}, {date} at {time}."
+      hi: "हो गया। आपका अपॉइंटमेंट बदलकर {doctor}, {date}, {time} कर दिया गया है।"
+      mr: "झालं. तुमची अपॉइंटमेंट बदलून {doctor}, {date}, {time} केली आहे."
+    reschedule_pending:
+      en: "Your request to move to {date} at {time} is sent to the clinic. Your current appointment stays until they approve it."
+      hi: "{date}, {time} पर बदलने का आपका अनुरोध क्लिनिक को भेज दिया गया है। मंज़ूरी मिलने तक आपका मौजूदा अपॉइंटमेंट बना रहेगा।"
+      mr: "{date}, {time} अशी वेळ बदलण्याची तुमची विनंती क्लिनिकला पाठवली आहे. मंजुरी मिळेपर्यंत तुमची सध्याची अपॉइंटमेंट कायम राहील."
+    cancel_none:
+      en: "You have no upcoming appointment to cancel."
+      hi: "आपका कोई आने वाला अपॉइंटमेंट नहीं है जिसे रद्द किया जा सके।"
+      mr: "रद्द करण्यासाठी तुमची कोणतीही आगामी अपॉइंटमेंट नाही."
+    cancel_ask:
+      en: "Cancel your appointment with {doctor} on {date} at {time}?"
+      hi: "क्या {doctor} के साथ {date}, {time} का अपॉइंटमेंट रद्द करना है?"
+      mr: "{doctor} यांच्याकडची {date}, {time} ची अपॉइंटमेंट रद्द करायची आहे का?"
+    cancelled:
+      en: "Your appointment is cancelled. Message us any time to book again."
+      hi: "आपका अपॉइंटमेंट रद्द कर दिया गया है। दोबारा बुक करने के लिए कभी भी मैसेज करें।"
+      mr: "तुमची अपॉइंटमेंट रद्द केली आहे. पुन्हा बुक करण्यासाठी कधीही मेसेज करा."
+    cancel_kept:
+      en: "Okay, your appointment stays as it is."
+      hi: "ठीक है, आपका अपॉइंटमेंट पहले जैसा ही रहेगा।"
+      mr: "ठीक आहे, तुमची अपॉइंटमेंट आहे तशीच राहील."
+    confirm_request:
+      en: "Please confirm your appointment: {doctor}, {date} at {time}."
+      hi: "कृपया अपना अपॉइंटमेंट कन्फ़र्म करें: {doctor}, {date}, {time}।"
+      mr: "कृपया तुमची अपॉइंटमेंट कन्फर्म करा: {doctor}, {date}, {time}."
+    confirmed:
+      en: "Thank you, your appointment is confirmed: {doctor}, {date} at {time}."
+      hi: "धन्यवाद, आपका अपॉइंटमेंट कन्फ़र्म हो गया है: {doctor}, {date}, {time}।"
+      mr: "धन्यवाद, तुमची अपॉइंटमेंट कन्फर्म झाली आहे: {doctor}, {date}, {time}."
+    nothing_to_confirm:
+      en: "You have no upcoming appointment to confirm."
+      hi: "आपका कोई आने वाला अपॉइंटमेंट नहीं है जिसे कन्फ़र्म किया जा सके।"
+      mr: "कन्फर्म करण्यासाठी तुमची कोणतीही आगामी अपॉइंटमेंट नाही."
+    reminder:
+      en: "Reminder: your appointment with {doctor} is on {date} at {time}."
+      hi: "याद दिला दें: {doctor} के साथ आपका अपॉइंटमेंट {date}, {time} को है।"
+      mr: "आठवण: {doctor} यांच्याकडे तुमची अपॉइंटमेंट {date}, {time} ला आहे."
+    not_understood:
+      en: "Sorry, that was not clear. Please choose an option below."
+      hi: "माफ़ कीजिए, यह साफ़ नहीं हुआ। कृपया नीचे से एक विकल्प चुनें।"
+      mr: "माफ करा, हे स्पष्ट झालं नाही. कृपया खालीलपैकी एक पर्याय निवडा."
+    handed_to_staff:
+      en: "Sorry for the trouble. The clinic team will contact you soon."
+      hi: "असुविधा के लिए माफ़ कीजिए। क्लिनिक की टीम जल्द ही आपसे संपर्क करेगी।"
+      mr: "गैरसोयीबद्दल माफ करा. क्लिनिकची टीम लवकरच तुमच्याशी संपर्क करेल."
+    human_requested:
+      en: "Okay. The clinic team will contact you on this number soon."
+      hi: "ठीक है। क्लिनिक की टीम जल्द ही इसी नंबर पर आपसे संपर्क करेगी।"
+      mr: "ठीक आहे. क्लिनिकची टीम लवकरच याच नंबरवर तुमच्याशी संपर्क करेल."
+    emergency:
+      en: "This sounds urgent. Please call the clinic now on {clinic_phone}. In a medical emergency, call 108 or go to the nearest hospital."
+      hi: "यह ज़रूरी लग रहा है। कृपया अभी क्लिनिक को {clinic_phone} पर कॉल करें। मेडिकल इमरजेंसी में 108 पर कॉल करें या नज़दीकी अस्पताल जाएँ।"
+      mr: "हे तातडीचं वाटतंय. कृपया आत्ताच क्लिनिकला {clinic_phone} वर फोन करा. वैद्यकीय आणीबाणीत 108 वर फोन करा किंवा जवळच्या रुग्णालयात जा."
+    language_switched:
+      en: "Sure, we will continue in English."
+      hi: "ज़रूर, अब हिंदी में बात करते हैं।"
+      mr: "नक्की, आता मराठीत बोलूया."
+    opted_out:
+      en: "Okay, you will not receive more messages from {business_name}."
+      hi: "ठीक है, अब आपको {business_name} से और मैसेज नहीं आएँगे।"
+      mr: "ठीक आहे, आता तुम्हाला {business_name} कडून आणखी मेसेज येणार नाहीत."
+
+    # Option labels: at most 20 characters (WhatsApp button titles).
+    opt_book: { en: "Book appointment", hi: "अपॉइंटमेंट बुक करें", mr: "अपॉइंटमेंट बुक करा" }
+    opt_reschedule: { en: "Change appointment", hi: "अपॉइंटमेंट बदलें", mr: "अपॉइंटमेंट बदला" }
+    opt_cancel: { en: "Cancel appointment", hi: "अपॉइंटमेंट रद्द करें", mr: "अपॉइंटमेंट रद्द करा" }
+    opt_human: { en: "Talk to clinic", hi: "क्लिनिक से बात करें", mr: "क्लिनिकशी बोला" }
+    opt_yes: { en: "Yes", hi: "हाँ", mr: "हो" }
+    opt_no: { en: "No", hi: "नहीं", mr: "नाही" }
+    opt_confirm: { en: "Confirm", hi: "कन्फ़र्म करें", mr: "कन्फर्म करा" }
+    opt_not_now: { en: "Not now", hi: "अभी नहीं", mr: "आत्ता नको" }
+    opt_more_days: { en: "More dates", hi: "और दिन", mr: "आणखी दिवस" }
+    opt_more_times: { en: "Later times", hi: "बाद के समय", mr: "नंतरच्या वेळा" }
+    opt_other_day: { en: "Another day", hi: "दूसरा दिन", mr: "दुसरा दिवस" }
+    opt_cancel_confirm: { en: "Yes, cancel", hi: "हाँ, रद्द करें", mr: "हो, रद्द करा" }
+    opt_keep: { en: "Keep it", hi: "रहने दें", mr: "राहू द्या" }
