@@ -16,7 +16,6 @@ Functions take a psycopg connection in autocommit mode and open their own transa
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from typing import Any
 from uuid import UUID
@@ -34,6 +33,7 @@ from salesbot_core.scheduling import (
     Interval,
     PractitionerCalendar,
     SchedulingSettings,
+    Scope,
     Slot,
     VisitType,
     WeeklyWindow,
@@ -68,14 +68,6 @@ class HoldExpiredError(BookingError):
 
 class InvalidStateError(BookingError):
     code = "invalid_state"
-
-
-@dataclass(frozen=True)
-class Scope:
-    """Which practitioners to search, and what kind of visit."""
-
-    visit: VisitType = VisitType.CONSULTATION
-    practitioner_id: UUID | None = None
 
 
 # ---------------------------------------------------------------------------
