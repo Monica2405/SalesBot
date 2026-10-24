@@ -31,8 +31,8 @@ X-Intake-Signature: v1=<hex HMAC-SHA256>
 | `caregiver_phone` | string (E.164) | no | |
 | `whatsapp_opt_in` | boolean | yes | Anvia sends **no WhatsApp message** without it. |
 | `call_opt_in` | boolean | yes | Anvia makes **no call** without it. (Outbound calls are disabled until the telephony decision.) |
-| `consent_at` | ISO 8601 with timezone | if any opt-in is true | When the patient gave consent. |
-| `consent_source` | string | no | Where consent was captured, e.g. `registration_form_v3`. |
+| `consent_at` | ISO 8601 with timezone | **yes** | When the patient answered the consent question (also when they opted out). |
+| `consent_source` | string | **yes** | Which consent text they saw, e.g. `registration_form_v3`. Change it whenever the wording changes. |
 
 Unknown fields are rejected (`422`), so typos never pass silently.
 
