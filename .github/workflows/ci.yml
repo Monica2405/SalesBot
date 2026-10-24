@@ -67,12 +67,11 @@ jobs:
         run: supabase stop --no-backup
 
   docker:
-    name: Build service images
+    name: Build API image
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - run: docker build -f apps/api/Dockerfile -t salesbot-api:ci .
-      - run: docker build -f apps/voice-agent/Dockerfile -t salesbot-agent:ci .
       - name: API image serves /health
         run: |
           docker run -d --name api -p 8000:8000 salesbot-api:ci

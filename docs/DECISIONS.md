@@ -13,10 +13,22 @@ the owner's sign-off (see CLAUDE.md).
   more. The API is never on Vercel either: Sarvam's tool calls and the WhatsApp webhooks need
   an always-on, low-latency service.
 
-### Voice platform: Sarvam Voice Agents (owner, 2026-10-22)
-- **Pipecat is out.** Calls run entirely on Sarvam Voice Agents, a managed platform whose
-  per-minute price includes the speech, language and voice models. We run no voice pipeline,
-  WebRTC transport or telephony serializers. `apps/voice-agent` is removed (Step 3).
+### Voice platform: Sarvam Voice Agents (owner, 2026-10-22; closed 2026-10-23)
+- **Pipecat is out; managed Sarvam Voice Agents is final.** Calls run entirely on Sarvam Voice
+  Agents, a managed platform whose per-minute price includes the speech, language and voice
+  models. We run no voice pipeline, WebRTC transport or telephony serializers.
+  `apps/voice-agent` was removed in Step 3A.
+- **Why it is closed (owner, 2026-10-23):** the only doubt was whether the YC credit covers Voice
+  Agents. Sarvam's billing docs (docs.sarvam.ai/api/platform/billing, read 2026-10-23): "There is
+  one credit balance per organisation, and every workspace, every API key, and every Sarvam
+  product draws from it"; "Model APIs, Voice Agents, Doc Agents, Content Agents and the rest all
+  spend from the same pool". Rented numbers are deducted from the same wallet (Rent from Sarvam
+  FAQ: "The cost of the number is deducted from your Sarvam wallet").
+- **Credit landed (owner, 2026-10-24):** Billing shows Credits Left **1,00,100** (about ₹1,00,000
+  YC credit plus ₹100 sign-up credit; 1 credit = ₹1), about **25,000 managed minutes** at ₹3.90
+  per minute including Sarvam telephony. **Expiry unknown** (the billing page says credits do not
+  expire, but a promotional grant may have its own terms): the owner is checking the redemption
+  email. See docs/COSTS.md.
 - **Telephony for the pilot: Sarvam telephony** (Vobiz, numbers rented from Sarvam).
   Bring-your-own (Plivo, Exotel) stays a documented fallback. No number is rented and no KYC
   is started without the owner's go.
@@ -26,8 +38,21 @@ the owner's sign-off (see CLAUDE.md).
   Google Calendar push, audit log) so the voice vendor can be swapped later. Sarvam's agent
   calls our API through API tools (webhooks) plus on-start and on-end hooks.
 - The pack stays the source of truth: the Sarvam agent instruction, greetings and FAQ text
-  are generated from it (`docs/SARVAM_AGENT.md`, Step 3).
-- Prices and limits: `docs/COSTS.md` (Step 3).
+  are generated from it (`make voice-agent`, embedded in `docs/SARVAM_AGENT.md`).
+- Prices and limits: `docs/COSTS.md`.
+- **Before and during voice testing (owner, 2026-10-24):**
+  - **Set a workspace retention period before any call**, test calls included (Settings ->
+    Workspace -> Data retention; org Owner only). Until then Sarvam keeps recordings and
+    transcripts indefinitely.
+  - **Voice testing on the owner's team's phones only.**
+  - **Enable the IP allowlist (`VOICE_IP_ALLOWLIST`) once deployed** on a stable host.
+  - No number rental, no simulated test runs and no outbound calls without the owner's go.
+- **Spend guard (owner, 2026-10-24):** anything we start that spends credits (outbound calls,
+  simulated test runs) is checked against a **per-session cap (default ₹100)** and a **per-day
+  cap (default ₹500, IST)**, both configurable (`SPEND_SESSION_CAP_INR`, `SPEND_DAILY_CAP_INR`),
+  and blocked with a clear error when a cap would be passed. Spend per call is logged from the
+  end-of-call payload. The owner is still asked, with an estimated cost, before any action that
+  spends credits.
 
 ### Supabase region: Mumbai (ap-south-1)
 Closest Supabase region to India for latency to the voice agent and owners.
@@ -64,7 +89,7 @@ another pack. Generic names in the schema: `clients` (patients), `practitioners`
     `calls.consent_recording` is set from that consent. No recording notice in the call
     opening line.
   - **Until the consent wording is agreed, voice testing is on the owner's team's phones
-    only.** Sarvam's recording retention is being investigated (Step 3D).
+    only.** Sarvam's recording and retention findings: see "Sarvam Voice Agents: findings".
 - **Wording policy (owner's decision, final 2026-10-22)**, for the agent instruction, WhatsApp
   templates, pack text and every spoken line, in en, hi and mr:
   - Never say or imply unprompted that the person is talking to an AI, bot, virtual or
@@ -128,8 +153,59 @@ another pack. Generic names in the schema: `clients` (patients), `practitioners`
   unconfirmed 24h before, one call; then a staff task. Reminders 24h and 2h before on WhatsApp.
   Quiet hours 21:00–08:00 IST. Call window 09:00–19:00 IST, max 3 attempts, 60 min apart.
   **No real outbound calls until the owner says so:** `OUTBOUND_CALLS_ENABLED=false` with a
-  dry-run mode (Step 3), plus the telecom questions below.
+  dry-run mode (built in Step 3: every check runs, nothing is dialled), plus the clinic policy
+  pinned off in code, plus the telecom questions below.
 - **Escalations in testing:** staff tasks in the admin only (see "Alert channel" below).
+
+### Sarvam Voice Agents: findings from the docs (Step 3D, 2026-10-23)
+Read from docs.sarvam.ai; nothing was called. "Not documented" means: ask Sarvam before relying
+on it.
+- **Recording.** "Every connected call handled by a voice agent is recorded" (stereo WAV, caller
+  left, agent right; `enable_stitched_audio` is on by default). **Whether recording can be
+  switched off is not documented**, and neither is where the data is stored (region). Retention is
+  a workspace setting (Settings -> Workspace -> Data retention, with a Voice Agents override; only
+  the org Owner can change it): **until a period is set, recordings and transcripts are kept
+  indefinitely**, and zero retention is not supported for Voice Agents. Recording is allowed with
+  registration consent (see above), so this is not a blocker for team-phone tests; storage
+  location and the retention period are DPDP items below. We store `calls.recording_ref` (Get
+  recording through the Analytics API), never the audio.
+- **Tools and call state.** API tools can write agent variables ("Save reply into variables") and
+  the agent reads them; ending the call, transfer and language switch are Sarvam's built-in core
+  tools, used by the model, not by our API. Tool timeout ("Max wait") is configurable up to 30 s,
+  with an "If it fails" line on timeout or error. Sarvam publishes no tool latency figures; our
+  target is under 2 s. Tool calls come from 4.213.167.70 and 35.154.84.150 (for allowlisting).
+  How a tool declares parameters the model fills in is not documented (to check in the builder).
+- **Webhooks.** Inbound deployment and instant-outbound webhooks are a URL plus metadata; **no
+  signature is documented**, so our URL carries a secret token (`VOICE_WEBHOOK_SECRET`). Payloads
+  carry duration in seconds but no billed minutes or pulses; we derive both.
+- **Renting from Sarvam.** KYC is required first (account type Individual or Corporate, plus an
+  email); **the documents needed and how long KYC takes are not documented**. After approval a
+  number is "provisioned instantly". Series 11, 79 or 80, ₹59 per 30 days, auto-renews; released
+  with no grace period if credits are short. 080/079 numbers are landlines and need a 0 or +91
+  prefix when dialled.
+- **Forwarding a clinic's existing number** to a rented number is not documented (it is a carrier
+  feature on the clinic's line); whether the forwarded caller's number reaches us as "User
+  Identifier" is not documented. **Outbound caller ID** is the agent's number
+  (`agent_phone_number`); campaigns can rotate numbers through groups.
+- **TRAI, DLT, number declaration:** Sarvam's docs say "Calling compliance is your
+  responsibility" and offer an org-wide DND list (manual, bulk or API); a failed call can report
+  e.g. "registered under TRAI NDNC". Nothing says Sarvam handles DLT registration, 140/160-series
+  rules or scrubbing: treat them as ours until Sarvam confirms (see "Telecom rules" below).
+- **One number, inbound and outbound:** one number routes to one inbound deployment at a time,
+  and the same number can be used for outbound (campaigns, instant outbound). So yes, as we read
+  it; confirm with Sarvam before the pilot.
+- **YC credits:** apply to Voice Agents (billing docs, see above); the credit has landed.
+- **API keys:** the Voice Agents APIs take a workspace API key in the `X-API-Key` header (Settings
+  -> API Key); Analytics refuses bearer tokens. Model APIs document `api-subscription-key` (or
+  bearer) with keys from the dashboard's API Keys section. The docs do not say whether one key
+  works for both. **Decision (owner, 2026-10-24):** a dedicated Voice Agents workspace key in
+  `SARVAM_VOICE_API_KEY`; the Model API key stays unused. Org id: Settings -> Organisation ->
+  General; workspace id: Settings -> Workspace -> General.
+- **WhatsApp channel:** Sarvam lists WhatsApp as a channel, but its pricing page says Enterprise
+  "adds workflows, WhatsApp campaigns, custom tool authoring, custom rate limits"; Enterprise
+  starts at 2 lakh minutes a month. Questions for Sarvam sales if we ever revisit: is an inbound
+  WhatsApp chat agent available below Enterprise, which BSP it uses, who owns the WhatsApp number
+  and templates, and how messages are priced. We keep our own Meta Cloud API adapter.
 
 ## Deferred
 
@@ -150,13 +226,18 @@ Docker is not running on the dev machine for now, so the local Supabase stack is
 
 ### Container host for the api
 Needs: always-on HTTPS for Sarvam tool calls and WhatsApp webhooks, low latency to India
-(Mumbai region), Docker images, secrets management, cheap at low volume. The voice-agent
-container is no longer needed. Not chosen.
+(Mumbai region), Docker images, secrets management, cheap at low volume. Only the api image is
+needed. Not chosen.
 
 ### Telephony beyond the pilot
 The pilot uses Sarvam telephony (see Decided). Bring-your-own Plivo or Exotel is the
 documented fallback if Sarvam numbers, KYC, caller ID or pricing do not work out. Findings on
-renting from Sarvam, call forwarding, caller ID and inbound/outbound on one number: Step 3D.
+renting from Sarvam, call forwarding, caller ID and inbound/outbound on one number: see
+"Sarvam Voice Agents: findings from the docs".
+
+### YC credit expiry (open, owner)
+The credit is in the shared Credits Left balance (1,00,100 on 2026-10-24). **Record its expiry
+here and in docs/COSTS.md once the redemption email confirms it.**
 
 ### WhatsApp provider for production
 Phase 1 builds on the Meta Cloud API directly through our own adapter (see Decided); Sarvam's
@@ -183,7 +264,9 @@ Decided). To decide (legal input needed):
 - **Legal review of recording consent and DPDP before real patients.** The registration
   form's consent text must cover call recording; the wording needs sign-off in en, hi and mr.
   Until it is agreed, voice testing is on the owner's team's phones only.
-- Retention of call recordings held by Sarvam, and whether we ever copy them to our bucket.
+- Retention of call recordings held by Sarvam (kept indefinitely until the workspace Owner sets
+  a period; zero retention is not offered for Voice Agents), where Sarvam stores them, and
+  whether we ever copy them to our bucket.
 - Retention periods for transcripts, conversation turns, audit log and inactive patients;
   deletion on request (right to erasure) and what must be kept for clinic records.
 - Consent: is the intake form's `consent_at` / `consent_source` enough for WhatsApp messages and
@@ -198,8 +281,8 @@ Decided). To decide (legal input needed):
   decision, see Decided). Confirm it is compatible with any disclosure rule that applies.
 
 ### Telecom rules for outbound calls (TRAI / DLT)
-Blocks real outbound calls. To settle with Sarvam (what they handle vs what stays on us is
-investigated in Step 3D):
+Blocks real outbound calls. Sarvam's docs put calling compliance on us (see findings above);
+to settle with Sarvam:
 - Are appointment confirmation and reminder calls "transactional/service" calls under TRAI's
   commercial communication rules (TCCCPR 2018 and later amendments), and what registration does
   that need (DLT entity, headers, consent templates)?

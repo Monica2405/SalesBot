@@ -313,6 +313,7 @@ def _event(
         type=kind,
         appointment_id=appt["id"],
         client_id=appt["client_id"],
+        call_id=actor.call_id,
         channel=actor.channel,
         language=actor.language,
         properties=properties,
@@ -387,8 +388,8 @@ def hold_slot(
                         """
                         insert into public.appointments (business_id, practitioner_id, client_id,
                           visit_type, starts_at, ends_at, status, hold_expires_at,
-                          rescheduled_from_id, booked_via, language)
-                        values (%s, %s, %s, %s, %s, %s, 'held', %s, %s, %s, %s)
+                          rescheduled_from_id, booked_via, language, call_id)
+                        values (%s, %s, %s, %s, %s, %s, 'held', %s, %s, %s, %s, %s)
                         returning *
                         """,
                         (
@@ -402,6 +403,7 @@ def hold_slot(
                             reschedule_of,
                             actor.channel.value,
                             actor.language,
+                            actor.call_id,
                         ),
                     ).fetchone()
             except errors.ExclusionViolation:

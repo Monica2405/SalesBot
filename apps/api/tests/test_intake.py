@@ -89,6 +89,9 @@ def test_tampered_body_is_401():
         {"phone": "9000000001"},  # not E.164
         {"preferred_language": "ta"},
         {"whatsapp_opt_in": True, "consent_at": None},  # opt-in without consent
+        {"whatsapp_opt_in": False, "call_opt_in": False, "consent_at": None},  # always required
+        {"consent_source": None},
+        {"consent_source": ""},
         {"consent_at": "2030-01-06T10:00:00"},  # naive timestamp
         {"unexpected": "field"},
         {"age": 200},
@@ -102,8 +105,9 @@ def test_invalid_payload_is_422_without_echoing_values(overrides):
     assert "9000000001" not in exc.value.reason and "Test Patient" not in exc.value.reason
 
 
-def test_no_opt_in_needs_no_consent():
-    IntakeRecord.model_validate(payload(whatsapp_opt_in=False, call_opt_in=False, consent_at=None))
+def test_consent_is_required_even_without_opt_in():
+    record = IntakeRecord.model_validate(payload(whatsapp_opt_in=False, call_opt_in=False))
+    assert record.consent_at is not None and record.consent_source
 
 
 def test_short_secret_is_refused():

@@ -109,6 +109,20 @@ insert into public.jobs (business_id, kind, appointment_id)
 values ('a1000000-0000-0000-0000-0000000000a1', 'reminder', 'a6000000-0000-0000-0000-0000000000a6'),
        ('b1000000-0000-0000-0000-0000000000b1', 'reminder', 'b6000000-0000-0000-0000-0000000000b6');
 
+-- Voice (Step 3): staff tasks, tool-call log, spend ledger.
+insert into public.staff_tasks (business_id, client_id, kind, summary)
+values ('a1000000-0000-0000-0000-0000000000a1', 'a5000000-0000-0000-0000-0000000000a5', 'callback', 'task A'),
+       ('b1000000-0000-0000-0000-0000000000b1', 'b5000000-0000-0000-0000-0000000000b5', 'callback', 'task B');
+
+insert into public.voice_tool_calls (business_id, interaction_id, tool, request_hash)
+values ('a1000000-0000-0000-0000-0000000000a1', '20300107/a', 'get_availability', 'ha'),
+       ('b1000000-0000-0000-0000-0000000000b1', '20300107/b', 'get_availability', 'hb');
+
+insert into public.spend_ledger (business_id, kind, session_id, spend_day, estimated_inr)
+values ('a1000000-0000-0000-0000-0000000000a1', 'outbound_call', 's', '2030-01-07', 39),
+       ('b1000000-0000-0000-0000-0000000000b1', 'outbound_call', 's', '2030-01-07', 39),
+       (null, 'test_run', 's', '2030-01-07', 2);
+
 insert into storage.objects (bucket_id, name)
 values ('recordings', 'a1000000-0000-0000-0000-0000000000a1/a3000000-0000-0000-0000-0000000000a3.wav'),
        ('recordings', 'b1000000-0000-0000-0000-0000000000b1/b3000000-0000-0000-0000-0000000000b3.wav');
@@ -168,6 +182,40 @@ begin
   if n <> 0 then raise exception 'cross-business read: audit_log'; end if;
   select count(*) into n from public.jobs where business_id = b;
   if n <> 0 then raise exception 'cross-business read: jobs'; end if;
+
+  select count(*) into n from public.staff_tasks where business_id = b;
+  if n <> 0 then raise exception 'cross-business read: staff_tasks'; end if;
+  select count(*) into n from public.voice_tool_calls where business_id = b;
+  if n <> 0 then raise exception 'cross-business read: voice_tool_calls'; end if;
+  select count(*) into n from public.spend_ledger where business_id = b or business_id is null;
+  if n <> 0 then raise exception 'cross-business read: spend_ledger'; end if;
+  select count(*) into n from public.staff_tasks;
+  if n <> 1 then raise exception 'owner A should see 1 staff task, saw %', n; end if;
+
+  -- Staff close their own tasks; B's tasks are untouched; tasks are created only by the API
+  update public.staff_tasks set status = 'done' where business_id = b;
+  get diagnostics n = row_count;
+  if n <> 0 then raise exception 'cross-business update: staff_tasks'; end if;
+  update public.staff_tasks set status = 'done';
+  get diagnostics n = row_count;
+  if n <> 1 then raise exception 'owner A could not close own staff task'; end if;
+  begin
+    update public.staff_tasks set summary = 'edited';
+    raise exception 'staff could edit a task summary';
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    insert into public.staff_tasks (business_id, kind, summary)
+    values ('a1000000-0000-0000-0000-0000000000a1', 'other', 'injected');
+    raise exception 'direct insert into staff_tasks was allowed';
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    insert into public.spend_ledger (business_id, kind, session_id, spend_day)
+    values ('a1000000-0000-0000-0000-0000000000a1', 'test_run', 'x', '2030-01-07');
+    raise exception 'direct insert into spend_ledger was allowed';
+  exception when insufficient_privilege then null;
+  end;
 
   update public.clients set automation_paused = true where business_id = b;
   get diagnostics n = row_count;
@@ -271,6 +319,12 @@ begin
   if n <> 0 then raise exception 'doctor can read leads'; end if;
   select count(*) into n from public.calls;
   if n <> 0 then raise exception 'doctor can read calls'; end if;
+  select count(*) into n from public.staff_tasks;
+  if n <> 0 then raise exception 'doctor can read staff_tasks'; end if;
+  select count(*) into n from public.voice_tool_calls;
+  if n <> 0 then raise exception 'doctor can read voice_tool_calls'; end if;
+  select count(*) into n from public.spend_ledger;
+  if n <> 0 then raise exception 'doctor can read spend_ledger'; end if;
 
   update public.appointments set automation_paused = true;
   get diagnostics n = row_count;

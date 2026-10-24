@@ -3,12 +3,11 @@
 
 ADMIN := apps/admin
 
-.PHONY: help setup dev-api dev-agent dev-admin require-docker db-up db-down db-reset migrate test lint format load-clinic simulate-intake console
+.PHONY: help setup dev-api dev-admin require-docker db-up db-down db-reset migrate test lint format load-clinic simulate-intake console voice-agent voice-ops
 
 help:
 	@echo "setup      install Python (uv) + admin (npm) deps and git hooks"
 	@echo "dev-api    run FastAPI on http://localhost:8000 (reload)"
-	@echo "dev-agent  run the voice agent with mock providers (text simulation)"
 	@echo "dev-admin  run the admin app on http://localhost:5173"
 	@echo "db-up      [requires Docker + Supabase CLI] start local Supabase"
 	@echo "db-down    [requires Docker + Supabase CLI] stop local Supabase"
@@ -20,6 +19,8 @@ help:
 	@echo "load-clinic FILE=x.yaml        load a clinic setup into SUPABASE_DB_URL (dev)"
 	@echo "simulate-intake ARGS='...'     send a signed fake registration (dev, see INTAKE_CONTRACT)"
 	@echo "console ARGS='--lang mr'       chat with the appointment flow in the terminal (no DB)"
+	@echo "voice-agent PACK=clinic        print the Sarvam agent setup rendered from a pack"
+	@echo "voice-ops ARGS='spend'         spend caps, test-run guard, outbound dry run, cost actuals"
 
 setup:
 	uv sync --all-packages
@@ -28,9 +29,6 @@ setup:
 
 dev-api:
 	uv run --package salesbot-api uvicorn salesbot_api.main:app --reload --port 8000
-
-dev-agent:
-	uv run --package salesbot-agent python -m salesbot_agent
 
 dev-admin:
 	npm --prefix $(ADMIN) run dev
@@ -73,3 +71,9 @@ simulate-intake:
 
 console:
 	uv run --package salesbot-api python -m salesbot_api.tools.console $(ARGS)
+
+voice-agent:
+	uv run python -m salesbot_core.packs.render_agent --pack $(or $(PACK),clinic)
+
+voice-ops:
+	uv run --package salesbot-api python -m salesbot_api.tools.voice_ops $(ARGS)

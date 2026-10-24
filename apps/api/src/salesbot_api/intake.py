@@ -21,7 +21,7 @@ from datetime import date, datetime
 from uuid import UUID
 
 import psycopg
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, ValidationError, model_validator
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, ValidationError
 
 from salesbot_api.records import Actor, enqueue_job, record_audit, record_event
 from salesbot_core.events import Channel, EventType, FunnelEvent, LeadSource
@@ -56,14 +56,10 @@ class IntakeRecord(BaseModel):
     caregiver_phone: str | None = Field(default=None, pattern=E164)
     whatsapp_opt_in: bool
     call_opt_in: bool
-    consent_at: AwareDatetime | None = None
-    consent_source: str | None = Field(default=None, max_length=200)
-
-    @model_validator(mode="after")
-    def _consent_for_opt_in(self) -> IntakeRecord:
-        if (self.whatsapp_opt_in or self.call_opt_in) and self.consent_at is None:
-            raise ValueError("consent_at is required when whatsapp_opt_in or call_opt_in is true")
-        return self
+    # Required on every request (owner, 2026-10-22), opted in or not, so each patient's
+    # consent state traces to the exact form text they saw. call_opt_in covers recording.
+    consent_at: AwareDatetime
+    consent_source: str = Field(min_length=1, max_length=200)
 
 
 class IntakeRejectedError(Exception):

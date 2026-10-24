@@ -13,7 +13,7 @@ name: Clinic
 version: 1
 languages: [en, hi, mr]
 draft_languages: [hi, mr]
-draft_messages: [emergency]
+draft_messages: [emergency, voice.task_created_urgent]
 
 # Voice greeting (inbound calls).
 greeting:
@@ -338,3 +338,148 @@ conversation:
     opt_other_day: { en: "Another day", hi: "दूसरा दिन", mr: "दुसरा दिवस" }
     opt_cancel_confirm: { en: "Yes, cancel", hi: "हाँ, रद्द करें", mr: "हो, रद्द करा" }
     opt_keep: { en: "Keep it", hi: "रहने दें", mr: "राहू द्या" }
+
+# Voice agent on Sarvam Voice Agents (docs/SARVAM_AGENT.md). The instruction is rendered by
+# `python -m salesbot_core.packs.render_agent --pack clinic`; {placeholders} become Sarvam
+# agent variables or pack text. `messages` are the spoken_text our API tools return.
+voice:
+  instruction:
+    Persona: >-
+      You answer phone calls for {business_name}, a clinic. Be warm, calm and brief. Speak in
+      short, simple sentences, one question at a time. Do not give yourself a name. Do not say
+      that you work at the clinic or that you are part of the clinic team. Do not describe what
+      you are unless the caller sincerely asks (see Honesty).
+    Objective: >-
+      Help registered patients book, change, confirm or cancel appointments, and pass anything
+      else to the clinic team. A call is done when the caller's request is completed or handed
+      to the clinic team.
+    Context: >-
+      Patient: {patient_name} (patient_id {patient_id}). Upcoming appointment:
+      {upcoming_appointment}. Preferred language: {preferred_language}. Clinic phone:
+      {clinic_phone}. Today is {current_day}, {current_date}, and the time is {current_time}
+      in India.
+    Steps: |-
+      1. If patient_id is empty, call identify_patient. If it lists several patients, ask which
+      patient the call is about and call identify_patient again with that patient_id. If the
+      number is not registered, say the tool's spoken_text and offer a callback.
+      2. To book: ask which day and part of the day suit the caller, then call get_availability.
+      Offer only the times it returns. When the caller picks one, call hold_slot with that
+      option's starts_at and practitioner_id, read back the doctor, weekday, date and time, and
+      ask for a yes. On yes, call book. Say the appointment is booked only when book returns
+      ok true.
+      3. To change an appointment: call get_availability with for_reschedule true, let the
+      caller pick, read it back, and on yes call reschedule.
+      4. To cancel: read the appointment back (doctor, weekday, date, time) and ask for a
+      clear yes. Only then call cancel with confirmed true.
+      5. To confirm attendance: call confirm_attendance.
+      6. For questions you cannot answer from the knowledge base, complaints, or a request to
+      speak with the clinic: call create_staff_task with a short summary, then say its
+      spoken_text.
+    Emergencies: >-
+      If the caller mentions chest pain, trouble breathing, heavy bleeding, fainting, severe
+      pain or any emergency, stop everything else. Say: "{emergency_line}" Then call
+      create_staff_task with reason emergency and urgency urgent. Do not give medical advice.
+    Tool results: >-
+      Every tool returns spoken_text in the caller's language. When ok is true, say it as it is.
+      When ok is false, say spoken_text and follow next_step. Never invent times, doctors or
+      bookings. Always say the weekday, date and time together. Never read out another
+      patient's details.
+    Honesty: >-
+      If the caller sincerely asks what they are talking to, answer with exactly this line in
+      the caller's language, then continue: "{sincere_ask_answer}"
+      Never deny it and never pretend otherwise.
+    Language: >-
+      Reply in the caller's language: English, Hindi or Marathi, only if the clinic offers it.
+      If the caller switches language, follow them.
+
+  sincere_ask_draft: true
+  sincere_ask_answer:
+    en: "This is {business_name}'s automated appointment line. I can also ask the clinic team to call you back."
+    hi: "यह {business_name} की स्वचालित अपॉइंटमेंट लाइन है। मैं क्लिनिक की टीम से आपको वापस कॉल करवाने के लिए भी कह सकती हूँ।"
+    mr: "ही {business_name} ची स्वयंचलित अपॉइंटमेंट लाइन आहे. मी क्लिनिकच्या टीमला तुम्हाला परत फोन करायला सांगू शकते."
+
+  messages:
+    identified:
+      en: "Thank you, {client_name}."
+      hi: "धन्यवाद, {client_name}।"
+      mr: "धन्यवाद, {client_name}."
+    identified_upcoming:
+      en: "Thank you, {client_name}. Your next appointment is with {doctor} on {date} at {time}."
+      hi: "धन्यवाद, {client_name}। आपका अगला अपॉइंटमेंट {doctor} के साथ {date}, {time} को है।"
+      mr: "धन्यवाद, {client_name}. तुमची पुढची अपॉइंटमेंट {doctor} यांच्याकडे {date}, {time} ला आहे."
+    choose_patient:
+      en: "This number is registered for {names}. Which of them is this call about?"
+      hi: "यह नंबर {names} के नाम पर रजिस्टर है। यह कॉल किसके बारे में है?"
+      mr: "हा नंबर {names} यांच्या नावावर नोंदवलेला आहे. हा फोन कोणाबद्दल आहे?"
+    not_registered:
+      en: "I can't find this number in the clinic's records. Please register with the clinic first. I can also ask the clinic team to call you back."
+      hi: "यह नंबर क्लिनिक के रिकॉर्ड में नहीं मिला। कृपया पहले क्लिनिक में रजिस्टर करें। मैं क्लिनिक की टीम से आपको कॉल करवाने के लिए भी कह सकती हूँ।"
+      mr: "हा नंबर क्लिनिकच्या नोंदीत सापडला नाही. कृपया आधी क्लिनिकमध्ये नोंदणी करा. मी क्लिनिकच्या टीमला तुम्हाला फोन करायला सांगू शकते."
+    options:
+      en: "I can offer {options}. Which one suits you?"
+      hi: "ये समय खाली हैं: {options}। आपको कौन-सा ठीक रहेगा?"
+      mr: "या वेळा उपलब्ध आहेत: {options}. तुम्हाला कोणती सोयीची आहे?"
+    option:
+      en: "{date} at {time} with {doctor}"
+      hi: "{date}, {time}, {doctor} के साथ"
+      mr: "{date}, {time}, {doctor} यांच्याकडे"
+    nothing_then:
+      en: "There is no free time then."
+      hi: "उस समय कुछ खाली नहीं है।"
+      mr: "त्या वेळी काहीही उपलब्ध नाही."
+    no_openings:
+      en: "Sorry, there are no free times in the next {days} days. I'll ask the clinic team to call you back."
+      hi: "माफ़ कीजिए, अगले {days} दिनों में कोई समय खाली नहीं है। मैं क्लिनिक की टीम से आपको कॉल करवाने के लिए कहती हूँ।"
+      mr: "माफ करा, पुढील {days} दिवसांत वेळ उपलब्ध नाही. मी क्लिनिकच्या टीमला तुम्हाला फोन करायला सांगते."
+    held:
+      en: "{doctor}, {date} at {time}. Shall I book it?"
+      hi: "{doctor}, {date}, {time}। क्या इसे बुक कर दूँ?"
+      mr: "{doctor}, {date}, {time}. बुक करू का?"
+    booked:
+      en: "Your appointment is booked with {doctor} on {date} at {time}."
+      hi: "आपका अपॉइंटमेंट {doctor} के साथ {date}, {time} को बुक हो गया है।"
+      mr: "तुमची अपॉइंटमेंट {doctor} यांच्याकडे {date}, {time} ला बुक झाली आहे."
+    rescheduled:
+      en: "Done. Your appointment is moved to {date} at {time} with {doctor}."
+      hi: "हो गया। आपका अपॉइंटमेंट {date}, {time} पर {doctor} के साथ कर दिया गया है।"
+      mr: "झालं. तुमची अपॉइंटमेंट {date}, {time} ला {doctor} यांच्याकडे हलवली आहे."
+    reschedule_pending:
+      en: "Your request to move to {date} at {time} is sent to the clinic. Your current appointment stays until they approve it."
+      hi: "{date}, {time} पर बदलने का आपका अनुरोध क्लिनिक को भेज दिया गया है। मंज़ूरी मिलने तक आपका मौजूदा अपॉइंटमेंट बना रहेगा।"
+      mr: "{date}, {time} अशी वेळ बदलण्याची तुमची विनंती क्लिनिकला पाठवली आहे. मंजुरी मिळेपर्यंत तुमची सध्याची अपॉइंटमेंट कायम राहील."
+    cancel_ask:
+      en: "Your appointment is with {doctor} on {date} at {time}. Do you want to cancel it?"
+      hi: "आपका अपॉइंटमेंट {doctor} के साथ {date}, {time} को है। क्या आप इसे रद्द करना चाहते हैं?"
+      mr: "तुमची अपॉइंटमेंट {doctor} यांच्याकडे {date}, {time} ला आहे. ती रद्द करायची आहे का?"
+    cancelled:
+      en: "Your appointment with {doctor} on {date} at {time} is cancelled."
+      hi: "{doctor} के साथ {date}, {time} का आपका अपॉइंटमेंट रद्द कर दिया गया है।"
+      mr: "{doctor} यांच्याकडची {date}, {time} ची तुमची अपॉइंटमेंट रद्द केली आहे."
+    confirmed:
+      en: "Thank you. Your appointment with {doctor} on {date} at {time} is confirmed."
+      hi: "धन्यवाद। {doctor} के साथ {date}, {time} का आपका अपॉइंटमेंट कन्फ़र्म हो गया है।"
+      mr: "धन्यवाद. {doctor} यांच्याकडची {date}, {time} ची तुमची अपॉइंटमेंट कन्फर्म झाली आहे."
+    no_upcoming:
+      en: "You have no upcoming appointment."
+      hi: "आपका कोई आने वाला अपॉइंटमेंट नहीं है।"
+      mr: "तुमची कोणतीही आगामी अपॉइंटमेंट नाही."
+    slot_taken:
+      en: "Sorry, {date} at {time} was just taken."
+      hi: "माफ़ कीजिए, {date}, {time} का समय अभी-अभी बुक हो गया।"
+      mr: "माफ करा, {date}, {time} ची वेळ आत्ताच बुक झाली."
+    hold_expired:
+      en: "Sorry, that time was released because it wasn't confirmed in time. Shall I check the free times again?"
+      hi: "माफ़ कीजिए, समय पर पुष्टि न होने से वह समय छूट गया। क्या मैं फिर से खाली समय देखूँ?"
+      mr: "माफ करा, वेळेत खात्री न झाल्याने ती वेळ सुटली. मी पुन्हा उपलब्ध वेळा पाहू का?"
+    task_created:
+      en: "I've passed this to the clinic team. They will call you back on this number."
+      hi: "मैंने यह बात क्लिनिक की टीम तक पहुँचा दी है। वे इसी नंबर पर आपको वापस कॉल करेंगे।"
+      mr: "मी हे क्लिनिकच्या टीमला कळवलं आहे. ते याच नंबरवर तुम्हाला परत फोन करतील."
+    task_created_urgent:
+      en: "I've marked this urgent for the clinic team. Please call the clinic now on {clinic_phone}. In a medical emergency, call {emergency_numbers}."
+      hi: "मैंने क्लिनिक की टीम के लिए इसे ज़रूरी बताया है। कृपया अभी क्लिनिक को {clinic_phone} पर कॉल करें। मेडिकल इमरजेंसी में {emergency_numbers} पर कॉल करें।"
+      mr: "मी क्लिनिकच्या टीमसाठी हे तातडीचं म्हणून नोंदवलं आहे. कृपया आत्ताच क्लिनिकला {clinic_phone} वर फोन करा. वैद्यकीय आणीबाणीत {emergency_numbers} वर फोन करा."
+    try_again:
+      en: "Sorry, I couldn't do that just now. I'll ask the clinic team to call you back."
+      hi: "माफ़ कीजिए, अभी यह नहीं हो पाया। मैं क्लिनिक की टीम से आपको वापस कॉल करवाने के लिए कहती हूँ।"
+      mr: "माफ करा, आत्ता हे होऊ शकलं नाही. मी क्लिनिकच्या टीमला तुम्हाला परत फोन करायला सांगते."

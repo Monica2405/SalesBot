@@ -31,7 +31,6 @@ from salesbot_api.settings import Settings
 
 
 def build_payload(args: argparse.Namespace) -> dict:
-    opted_in = args.whatsapp or args.call
     data = {
         "clinic_id": args.clinic_id,
         "external_patient_id": args.external_id or f"sim-{uuid.uuid4().hex[:10]}",
@@ -44,8 +43,8 @@ def build_payload(args: argparse.Namespace) -> dict:
         "caregiver_phone": args.caregiver_phone,
         "whatsapp_opt_in": args.whatsapp,
         "call_opt_in": args.call,
-        "consent_at": datetime.now(UTC).isoformat() if opted_in else None,
-        "consent_source": "dev_simulator" if opted_in else None,
+        "consent_at": datetime.now(UTC).isoformat(),
+        "consent_source": "dev_simulator",
     }
     payload = {k: v for k, v in data.items() if v is not None}
     IntakeRecord.model_validate(payload)  # fail here, not at the server, on bad input

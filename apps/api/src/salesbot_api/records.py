@@ -27,6 +27,8 @@ class Actor:
     channel: Channel
     user_id: UUID | None = None
     language: str | None = None
+    # The call this change happened on (voice), so bookings are attributed to the call.
+    call_id: UUID | None = None
 
 
 SYSTEM = Actor(type="system", channel=Channel.SYSTEM)
