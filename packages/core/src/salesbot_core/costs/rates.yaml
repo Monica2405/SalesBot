@@ -1,0 +1,34 @@
+# Rates used for cost estimates. Source of truth: docs/COSTS.md (keep the two in step).
+# Prices in INR, excluding GST. Re-verify against the sources before any quote to a client,
+# and update last_verified when you do.
+last_verified: 2026-10-22
+sources:
+  - https://docs.sarvam.ai/voice-agents/pricing
+  - Meta WhatsApp Business Platform pricing (India); figures below are third-party estimates
+
+voice:
+  # Sarvam Voice Agents plan in use. pay_as_you_go until the owner picks a paid plan.
+  plan: pay_as_you_go
+  agent_rate_per_minute:
+    pay_as_you_go: 3.50
+    pro: 3.25
+    growth: 3.15
+    business: 3.00
+  # Agent minutes are 60-second pulses, telephony 30-second pulses, each rounded up.
+  agent_pulse_seconds: 60
+  telephony_pulse_seconds: 30
+  telephony_rate_per_pulse:
+    sarvam: 0.20     # Sarvam telephony (Vobiz), rented numbers
+    byo: 0.00        # bring your own provider: billed by the provider, not Sarvam
+  forwarding_rate_per_pulse:
+    pstn: 0.40
+    sip: 0.35
+  number_rental_per_30_days: 59.00
+  simulated_test_run: 2.00
+
+whatsapp:
+  # Per message, by Meta pricing category. Third-party figures until checked against Meta.
+  per_message:
+    utility: 0.115
+    marketing: 0.8631
+    service: 0.00    # free for the first 1,000 per business number per month
