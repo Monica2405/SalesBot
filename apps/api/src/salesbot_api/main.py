@@ -41,17 +41,7 @@ def me(user: Annotated[AuthUser, Depends(current_user)]) -> dict[str, Any]:
     return {"id": str(user.id), "email": user.email}
 
 
-# --- Webhooks (stubs). Provider choices are open decisions; see docs/DECISIONS.md. ---
-
-
-@app.post("/webhooks/telephony/{provider}", status_code=status.HTTP_202_ACCEPTED)
-def telephony_webhook(provider: str, settings: SettingsDep) -> dict[str, str]:
-    # TODO: verify the provider's request signature, then hand the call to the voice agent.
-    if provider != settings.telephony_provider:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "unknown telephony provider")
-    if provider != "mock":
-        raise HTTPException(status.HTTP_501_NOT_IMPLEMENTED, f"{provider} webhook not built yet")
-    return {"status": "accepted"}
+# --- Webhooks (stubs). Voice webhooks live in salesbot_api.voice (api_v1 router). ---
 
 
 @app.post("/webhooks/whatsapp")

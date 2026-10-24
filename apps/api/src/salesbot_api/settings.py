@@ -27,8 +27,6 @@ class Settings(BaseSettings):
     supabase_db_url: SecretStr | None = None
     supabase_jwt_secret: SecretStr | None = None
 
-    telephony_provider: Literal["mock", "plivo", "exotel"] = "mock"
-
     # Client intake (docs/INTAKE_CONTRACT.md). Shared with the owner of the registration form.
     intake_adapter: Literal["hmac_webhook"] = "hmac_webhook"
     intake_hmac_secret: SecretStr | None = None
@@ -44,6 +42,24 @@ class Settings(BaseSettings):
 
     hubspot_enabled: bool = False
     hubspot_access_token: SecretStr | None = None
+
+    # Sarvam Voice Agents (docs/SARVAM_AGENT.md). The agent calls our API tools with
+    # VOICE_TOOL_SECRET as a bearer token (stored in Sarvam's Secrets). Sarvam's call-completion
+    # webhooks cannot send headers, so their URL carries VOICE_WEBHOOK_SECRET instead.
+    voice_tool_secret: SecretStr | None = None
+    voice_webhook_secret: SecretStr | None = None
+    # Optional comma-separated source IPs allowed to call the voice endpoints. Empty = any.
+    voice_ip_allowlist: str | None = None
+    sarvam_api_key: SecretStr | None = None
+    sarvam_org_id: str | None = None
+    sarvam_workspace_id: str | None = None
+    sarvam_app_id: str | None = None
+    sarvam_app_version: int | None = None
+    sarvam_connection_id: str | None = None
+    sarvam_agent_phone_number: str | None = None
+    # Real outbound calls stay off until the owner says so. Off = dry run: log and record what
+    # would be called, never dial.
+    outbound_calls_enabled: bool = False
 
     call_max_seconds: int = 600
     default_business_usage_cap_minutes: int = 500

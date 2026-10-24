@@ -15,7 +15,6 @@ WORKDIR /app
 COPY pyproject.toml uv.lock .python-version ./
 COPY packages/core/pyproject.toml packages/core/pyproject.toml
 COPY apps/api/pyproject.toml apps/api/pyproject.toml
-COPY apps/voice-agent/pyproject.toml apps/voice-agent/pyproject.toml
 RUN uv sync --frozen --no-dev --package salesbot-api --no-install-workspace
 
 COPY packages/core packages/core

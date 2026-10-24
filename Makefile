@@ -3,12 +3,11 @@
 
 ADMIN := apps/admin
 
-.PHONY: help setup dev-api dev-agent dev-admin require-docker db-up db-down db-reset migrate test lint format load-clinic simulate-intake console
+.PHONY: help setup dev-api dev-admin require-docker db-up db-down db-reset migrate test lint format load-clinic simulate-intake console
 
 help:
 	@echo "setup      install Python (uv) + admin (npm) deps and git hooks"
 	@echo "dev-api    run FastAPI on http://localhost:8000 (reload)"
-	@echo "dev-agent  run the voice agent with mock providers (text simulation)"
 	@echo "dev-admin  run the admin app on http://localhost:5173"
 	@echo "db-up      [requires Docker + Supabase CLI] start local Supabase"
 	@echo "db-down    [requires Docker + Supabase CLI] stop local Supabase"
@@ -28,9 +27,6 @@ setup:
 
 dev-api:
 	uv run --package salesbot-api uvicorn salesbot_api.main:app --reload --port 8000
-
-dev-agent:
-	uv run --package salesbot-agent python -m salesbot_agent
 
 dev-admin:
 	npm --prefix $(ADMIN) run dev
