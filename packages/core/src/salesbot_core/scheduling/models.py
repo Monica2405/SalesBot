@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime, time
 from enum import StrEnum
 from uuid import UUID
@@ -107,3 +108,11 @@ class Slot(_Frozen):
     practitioner_id: UUID
     starts_at: datetime
     ends_at: datetime
+
+
+@dataclass(frozen=True)
+class Scope:
+    """Which practitioners to search, and what kind of visit."""
+
+    visit: VisitType = VisitType.CONSULTATION
+    practitioner_id: UUID | None = None

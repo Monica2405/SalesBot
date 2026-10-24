@@ -3,7 +3,7 @@
 
 ADMIN := apps/admin
 
-.PHONY: help setup dev-api dev-agent dev-admin require-docker db-up db-down db-reset migrate test lint format load-clinic simulate-intake
+.PHONY: help setup dev-api dev-agent dev-admin require-docker db-up db-down db-reset migrate test lint format load-clinic simulate-intake console
 
 help:
 	@echo "setup      install Python (uv) + admin (npm) deps and git hooks"
@@ -19,6 +19,7 @@ help:
 	@echo "format     ruff format + fix"
 	@echo "load-clinic FILE=x.yaml        load a clinic setup into SUPABASE_DB_URL (dev)"
 	@echo "simulate-intake ARGS='...'     send a signed fake registration (dev, see INTAKE_CONTRACT)"
+	@echo "console ARGS='--lang mr'       chat with the appointment flow in the terminal (no DB)"
 
 setup:
 	uv sync --all-packages
@@ -69,3 +70,6 @@ load-clinic:
 
 simulate-intake:
 	uv run --package salesbot-api python -m salesbot_api.tools.simulate_intake $(ARGS)
+
+console:
+	uv run --package salesbot-api python -m salesbot_api.tools.console $(ARGS)

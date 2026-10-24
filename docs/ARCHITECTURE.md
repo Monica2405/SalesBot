@@ -26,7 +26,7 @@ sequenceDiagram
     T->>API: inbound webhook (call id, from, to)
     API->>DB: calls row (source, script_version_id), event call_received
     T->>A: media stream (WebSocket)
-    A->>C: AI disclosure + recording consent
+    A->>C: opening + recording consent
     C->>A: yes / no
     A->>API: consent_given / consent_declined (recording only if yes)
     loop each turn

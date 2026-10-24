@@ -16,7 +16,6 @@ Functions take a psycopg connection in autocommit mode and open their own transa
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from typing import Any
 from uuid import UUID
@@ -34,6 +33,7 @@ from salesbot_core.scheduling import (
     Interval,
     PractitionerCalendar,
     SchedulingSettings,
+    Scope,
     Slot,
     VisitType,
     WeeklyWindow,
@@ -70,14 +70,6 @@ class InvalidStateError(BookingError):
     code = "invalid_state"
 
 
-@dataclass(frozen=True)
-class Scope:
-    """Which practitioners to search, and what kind of visit."""
-
-    visit: VisitType = VisitType.CONSULTATION
-    practitioner_id: UUID | None = None
-
-
 # ---------------------------------------------------------------------------
 # Loading
 # ---------------------------------------------------------------------------
@@ -86,7 +78,8 @@ class Scope:
 def load_settings(conn: psycopg.Connection, business_id: UUID) -> SchedulingSettings:
     row = conn.execute(
         """
-        select b.timezone, b.default_language, s.hold_minutes, s.min_lead_minutes,
+        select b.timezone, b.default_language, b.allowed_languages, b.emergency_numbers,
+               s.hold_minutes, s.min_lead_minutes,
                s.lookahead_days, s.days_per_list, s.slot_step_minutes,
                s.practitioner_selection, s.default_practitioner_id, s.reschedule_approval,
                s.confirmation_policy, s.reminder_policy, s.call_policy

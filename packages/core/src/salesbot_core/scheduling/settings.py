@@ -7,6 +7,7 @@ as `{}` by default and filled from these models when read.
 
 from __future__ import annotations
 
+import re
 from datetime import time, timedelta
 from enum import StrEnum
 from typing import Any, Literal
@@ -95,6 +96,10 @@ class SchedulingSettings(_Strict):
     call_policy: CallPolicy = Field(default_factory=CallPolicy)
     # From businesses.default_language; the fallback when a client's language is unsupported.
     default_language: Language = "en"
+    # From businesses.allowed_languages: the languages this clinic offers. Marathi is opt-in.
+    allowed_languages: list[Language] = Field(default_factory=lambda: ["en", "hi"], min_length=1)
+    # From businesses.emergency_numbers: given in every emergency reply with the clinic phone.
+    emergency_numbers: list[str] = Field(default_factory=lambda: ["112", "108"], min_length=1)
     timezone: str = "Asia/Kolkata"
 
     @field_validator("confirmation_policy", "reminder_policy", "call_policy", mode="before")
@@ -110,6 +115,14 @@ class SchedulingSettings(_Strict):
             and self.default_practitioner_id is None
         ):
             raise ValueError("default_practitioner selection needs default_practitioner_id")
+        return self
+
+    @model_validator(mode="after")
+    def _languages_and_numbers(self) -> SchedulingSettings:
+        if self.default_language not in self.allowed_languages:
+            raise ValueError("default_language must be one of allowed_languages")
+        if not all(re.fullmatch(r"[0-9]{3,15}", n) for n in self.emergency_numbers):
+            raise ValueError("emergency_numbers must be digits only, e.g. 112")
         return self
 
     @property

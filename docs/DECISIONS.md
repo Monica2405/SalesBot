@@ -8,8 +8,26 @@ the owner's sign-off (see CLAUDE.md).
 ### Hosting split
 - Supabase for Postgres, Auth and Storage.
 - Vercel hosts only `apps/admin` (static SPA, Root Directory `apps/admin`).
-- `apps/api` and `apps/voice-agent` ship as Docker images for a long-running container host.
-  Voice is never on Vercel (time-limited functions; WebSockets close at the time limit).
+- `apps/api` ships as a Docker image for a long-running container host (host still open).
+  Voice runs on Sarvam's managed platform (see below), so there is no voice container any
+  more. The API is never on Vercel either: Sarvam's tool calls and the WhatsApp webhooks need
+  an always-on, low-latency service.
+
+### Voice platform: Sarvam Voice Agents (owner, 2026-10-22)
+- **Pipecat is out.** Calls run entirely on Sarvam Voice Agents, a managed platform whose
+  per-minute price includes the speech, language and voice models. We run no voice pipeline,
+  WebRTC transport or telephony serializers. `apps/voice-agent` is removed (Step 3).
+- **Telephony for the pilot: Sarvam telephony** (Vobiz, numbers rented from Sarvam).
+  Bring-your-own (Plivo, Exotel) stays a documented fallback. No number is rented and no KYC
+  is started without the owner's go.
+- **WhatsApp stays ours:** Meta Cloud API through our own adapter in `apps/api`. Sarvam's
+  WhatsApp channel is enterprise-only; we do not plan around it.
+- **All business logic stays on our side** (booking, availability, patients, reminders,
+  Google Calendar push, audit log) so the voice vendor can be swapped later. Sarvam's agent
+  calls our API through API tools (webhooks) plus on-start and on-end hooks.
+- The pack stays the source of truth: the Sarvam agent instruction, greetings and FAQ text
+  are generated from it (`docs/SARVAM_AGENT.md`, Step 3).
+- Prices and limits: `docs/COSTS.md` (Step 3).
 
 ### Supabase region: Mumbai (ap-south-1)
 Closest Supabase region to India for latency to the voice agent and owners.
@@ -33,12 +51,72 @@ another pack. Generic names in the schema: `clients` (patients), `practitioners`
   is chosen. The URL changes on every restart; the owner is told each time to update Meta.
 - **Anvia's database is the source of truth** for availability and bookings. Google Calendar is
   optional, one-way (Anvia → doctor's calendar), no two-way sync in Phase 1.
-- **No call audio is recorded or stored.** Transcripts, summaries, per-turn language and
-  appointment data only. Transcripts are kept in dev until the retention decision below.
-- **Wording policy (owner's decision):** patient-facing text never says or hints that the patient
-  is talking to an AI, bot, virtual or automated assistant, and never claims to be a person or
-  staff member. If sincerely asked, one short truthful line (pack text, DRAFT until reviewed).
-  Enforced by a word-scan test. Admin screens and docs may say AI.
+- **Call audio may be recorded via Sarvam; consent is captured at registration.** We store
+  transcripts, summaries, language per turn and appointment data. Access is scoped per
+  clinic. Retention is a decision to make. (Owner, 2026-10-22; replaces the earlier "no
+  audio" rule.) Details:
+  - We prefer linking to Sarvam's recordings through their recording API: we store only the
+    interaction id and the retrieval reference, not the audio. The private `recordings`
+    bucket and `calls.recording_path` stay for optional copies later.
+  - For review in the admin we keep transcript, summary, language per turn, outcome and tool
+    calls.
+  - The registration form's consent text must cover call recording (docs/INTAKE_CONTRACT.md).
+    `calls.consent_recording` is set from that consent. No recording notice in the call
+    opening line.
+  - **Until the consent wording is agreed, voice testing is on the owner's team's phones
+    only.** Sarvam's recording retention is being investigated (Step 3D).
+- **Wording policy (owner's decision, final 2026-10-22)**, for the agent instruction, WhatsApp
+  templates, pack text and every spoken line, in en, hi and mr:
+  - Never say or imply unprompted that the person is talking to an AI, bot, virtual or
+    automated assistant. Never claim to be human, a staff member or someone at the clinic.
+    No fake human cues.
+  - If someone sincerely asks whether they are talking to a person or a machine, answer
+    truthfully in one short line (per-language pack text, DRAFT until reviewed), then
+    continue. Never deny it.
+  - Internal admin screens and docs may say AI.
+  - Enforced by a word-scan test (en, hi, mr) over all patient-facing text, including the
+    generated agent instruction. Only the sincere-ask answer lines are allowlisted.
+- **Conversation decisions (owner, 2026-10-21, Stage B):**
+  - Every patient-facing sentence comes from **pack templates** with slots (`{doctor}`,
+    `{date}`). An LLM may later help understand messages but never writes replies.
+  - Replies follow the language of each message. Romanized Hindi or Marathi ("kal 11 baje",
+    "udya sakali") that clearly reads as one of them is answered in Devanagari. Short neutral
+    replies ("ok", "2") never switch. Unsupported scripts get the clinic's default language.
+  - **DRAFT text** is blocked from real patients until reviewed: the sincere-ask answer lines in
+    every language, and every Hindi and Marathi line until a native speaker reviews it. Live
+    sending of DRAFT text fails closed; the dev console shows it tagged `[DRAFT]`.
+  - Voice opening line: the "AI assistant" wording is removed. The recording-consent
+    question is dropped too (2026-10-22): consent comes from registration (see above).
+  - Language detection here is ours and serves text channels (WhatsApp, the console). Voice
+    calls use Sarvam's own language-switch setting; we do not build a detector for voice.
+- **Languages per clinic (owner, 2026-10-22, Step 2):**
+  - Most patients write Hindi, English or Hinglish. `businesses.allowed_languages` sets what
+    a clinic offers; the default is `[en, hi]` and **Marathi is opt-in per clinic**.
+    `default_language` must be one of them.
+  - Romanized rule: a single word never switches; Hindi needs two Hindi words, or one with
+    at most one English word (so Hinglish reads as Hindi); English needs two English words
+    and no Hindi. Anything else keeps the current language (sticky).
+  - **Marathi is lower-tested.** No large Marathi word lists. Known gaps, kept as expected
+    test failures: "kal sakali 11 baje" and "छातीत दुखतंय" read as Hindi. Under review.
+  - Romanized Hindi is still answered in Devanagari. **After the pilot, consider a clinic
+    setting to reply in the patient's script** (romanized Hindi for Hinglish typists).
+  - Sarvam's text language-ID API (`POST /text-lid`, ₹3.5 per 10K characters, 1,000
+    characters max, no confidence score; latency not documented) is **not used**. It could be
+    evaluated later against our test set, **only with the owner's approval** (it spends
+    credits).
+- **Emergency safeguard (owner, 2026-10-22):** a possible emergency never gets a wrong-language
+  or generic reply.
+  - Checked before anything else, before the language is updated. The reply is in the
+    patient's last known language; if the message is clearly in another allowed language, a
+    second line in that language follows. No options, no "not understood".
+  - Every emergency reply gives the clinic phone (`businesses.contact_phone`) and the clinic's
+    emergency numbers (`businesses.emergency_numbers`, default 112 and 108). Tests fail if any
+    reply lacks one.
+  - While the emergency wording is DRAFT, live channels send a fixed fallback instead of
+    blocking: numbers and symbols only, no clinical wording (`🚑 112 / 108 · ☎ <clinic>`).
+    The urgent staff task is created either way.
+  - **Pre-launch:** the owner gets the full emergency wording (en, hi, mr) reviewed by
+    someone clinical before real patients.
 - **Every scheduling value is a per-clinic setting** (`scheduling_settings`). Defaults approved
   by the owner: slot hold 5 min, minimum lead time 60 min, lookahead 14 days, 9 days per list,
   doctor choice `any_available` (or `default_practitioner`; the form may send a doctor),
@@ -49,7 +127,8 @@ another pack. Generic names in the schema: `clients` (patients), `practitioners`
   call or both): confirmation request on WhatsApp right after booking; nudge after 6h; if still
   unconfirmed 24h before, one call; then a staff task. Reminders 24h and 2h before on WhatsApp.
   Quiet hours 21:00–08:00 IST. Call window 09:00–19:00 IST, max 3 attempts, 60 min apart.
-  **Outbound calls stay blocked until the telephony decision (Stage G).**
+  **No real outbound calls until the owner says so:** `OUTBOUND_CALLS_ENABLED=false` with a
+  dry-run mode (Step 3), plus the telecom questions below.
 - **Escalations in testing:** staff tasks in the admin only (see "Alert channel" below).
 
 ## Deferred
@@ -69,17 +148,19 @@ Docker is not running on the dev machine for now, so the local Supabase stack is
 
 ## Open
 
-### Container host for api and voice-agent
-Needs: long-running processes, WebSockets, low latency to India (Mumbai region), Docker images,
-secrets management, cheap at low volume. Not chosen. Candidates to evaluate later.
+### Container host for the api
+Needs: always-on HTTPS for Sarvam tool calls and WhatsApp webhooks, low latency to India
+(Mumbai region), Docker images, secrets management, cheap at low volume. The voice-agent
+container is no longer needed. Not chosen.
 
-### Telephony provider: Plivo vs Exotel
-Both behind `TelephonyAdapter`; only the mock exists. Compare: Indian number availability and
-KYC, media streaming over WebSocket (needed for Pipecat), per-minute cost, transfer support (for
-handoff), recording, webhook signatures.
+### Telephony beyond the pilot
+The pilot uses Sarvam telephony (see Decided). Bring-your-own Plivo or Exotel is the
+documented fallback if Sarvam numbers, KYC, caller ID or pricing do not work out. Findings on
+renting from Sarvam, call forwarding, caller ID and inbound/outbound on one number: Step 3D.
 
 ### WhatsApp provider for production
-Phase 1 builds on the Meta Cloud API directly (see Decided). Still open for production: stay on
+Phase 1 builds on the Meta Cloud API directly through our own adapter (see Decided); Sarvam's
+WhatsApp channel is enterprise-only and not part of the plan. Still open for production: stay on
 the Cloud API or move to a BSP; Meta business verification, a real number and display-name
 approval; per-message pricing by template category. Hindi and Marathi templates need native
 review and separate Meta approval.
@@ -97,22 +178,28 @@ pilot** (no pausing, daily backups).
 
 ### Data retention and DPDP compliance
 Transcripts, intake data, appointment history and health-adjacent details (age, reason for a
-visit) are personal data under the DPDP Act 2023. No call audio is stored. To decide (legal input
-needed):
+visit) are personal data under the DPDP Act 2023. Call audio may be recorded by Sarvam (see
+Decided). To decide (legal input needed):
+- **Legal review of recording consent and DPDP before real patients.** The registration
+  form's consent text must cover call recording; the wording needs sign-off in en, hi and mr.
+  Until it is agreed, voice testing is on the owner's team's phones only.
+- Retention of call recordings held by Sarvam, and whether we ever copy them to our bucket.
 - Retention periods for transcripts, conversation turns, audit log and inactive patients;
   deletion on request (right to erasure) and what must be kept for clinic records.
 - Consent: is the intake form's `consent_at` / `consent_source` enough for WhatsApp messages and
   outbound calls, per purpose (appointment management vs anything else)? Wording per language.
 - Caregivers: consent when a caregiver's number is used; whose data it is.
-- Data processors and location: Supabase (Mumbai), Meta (WhatsApp), Sarvam (STT/LLM/TTS),
-  telephony provider, Google (optional calendar). Processing terms with each.
+- Data processors and location: Supabase (Mumbai), Meta (WhatsApp), Sarvam (voice platform,
+  telephony, call recordings and transcripts), Google (optional calendar). Processing terms
+  with each.
 - Children's data: verifiable parental consent for patients under 18.
 - Breach process and the notice owed to patients and the Data Protection Board.
 - Legal review of the wording policy: patient-facing text does not mention automation (owner's
   decision, see Decided). Confirm it is compatible with any disclosure rule that applies.
 
-### Telecom rules for outbound calls (TRAI / DLT, Stage G)
-Blocks real outbound calls. To decide with the chosen telephony provider:
+### Telecom rules for outbound calls (TRAI / DLT)
+Blocks real outbound calls. To settle with Sarvam (what they handle vs what stays on us is
+investigated in Step 3D):
 - Are appointment confirmation and reminder calls "transactional/service" calls under TRAI's
   commercial communication rules (TCCCPR 2018 and later amendments), and what registration does
   that need (DLT entity, headers, consent templates)?

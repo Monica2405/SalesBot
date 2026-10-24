@@ -56,3 +56,14 @@ def test_scheduling_defaults_match_sql_columns():
         m = re.search(rf"\b{column}\s+text not null default '([a-z_]+)'", SQL)
         assert m, column
         assert m.group(1) == getattr(defaults, column).value, column
+
+
+def test_language_and_emergency_defaults_match_sql():
+    defaults = SchedulingSettings()
+    for column in ("allowed_languages", "emergency_numbers"):
+        m = re.search(rf"\b{column}\s+text\[\] not null default '\{{([^}}]*)\}}'", SQL)
+        assert m, column
+        assert m.group(1).split(",") == getattr(defaults, column), column
+    m = re.search(r"allowed_languages <@ array\[(.*?)\]", SQL)
+    assert m
+    assert set(re.findall(r"'([a-z]+)'", m.group(1))) == {"en", "hi", "mr"}

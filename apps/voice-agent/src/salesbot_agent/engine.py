@@ -1,7 +1,8 @@
 """The generic receptionist engine. One engine for every industry: all behaviour that differs
 between a dentist and a salon comes from the Pack.
 
-Turn flow: disclosure + consent -> greeting -> intake questions (from the pack) -> lead captured.
+Turn flow: opening + recording consent -> greeting -> intake questions (from the pack) ->
+lead captured.
 An emergency trigger at any point after consent jumps to handoff (callback fallback).
 Every step emits a funnel EventType so the call can be measured.
 """
@@ -12,7 +13,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import StrEnum
 
-from salesbot_agent.consent import disclosure_text, parse_consent
+from salesbot_agent.consent import opening_text, parse_consent
 from salesbot_agent.emergency import detect_emergency
 from salesbot_agent.handoff import CALLBACK_MESSAGE, HandoffHandler
 from salesbot_core.events import EventType, LeadSource
@@ -72,7 +73,7 @@ class Receptionist:
 
     def opening(self) -> AgentTurn:
         return AgentTurn(
-            say=disclosure_text(self.ctx.language, self.ctx.business_name),
+            say=opening_text(self.ctx.language, self.ctx.business_name),
             events=[EventType.CALL_RECEIVED, EventType.CALL_ANSWERED],
         )
 

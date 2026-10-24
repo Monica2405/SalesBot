@@ -6,6 +6,11 @@ slug: demo-clinic
 pack: clinic
 timezone: Asia/Kolkata
 default_language: mr
+# Marathi is opt-in: the default is [en, hi]. default_language must be one of these.
+allowed_languages: [en, hi, mr]
+# The clinic's number for patients, given in every emergency reply (fake number).
+contact_phone: "+910000000000"
+# emergency_numbers: ["112", "108"]   # default
 
 # Only what differs from the defaults (docs/DECISIONS.md). All optional.
 settings:

@@ -6,9 +6,18 @@ industry-specific logic. Adding a new industry should mean adding a YAML file, n
 
 from __future__ import annotations
 
+import re
+from string import Formatter
 from typing import Annotated, Literal
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field, model_validator
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 Language = Literal["en", "hi", "mr"]
 
@@ -62,6 +71,51 @@ class EmergencyConfig(_Strict):
     message: LocalizedText
 
 
+Intent = Literal[
+    "book", "reschedule", "cancel", "yes", "no", "human", "menu", "more", "stop", "thanks"
+]
+
+
+class SincereAsk(_Strict):
+    """A patient sincerely asking whether they are talking to a person or a machine.
+
+    `answer` is the one short truthful line, and the only patient-facing text allowed to mention
+    automation (wording policy, docs/DECISIONS.md). It is DRAFT in every language until reviewed.
+    """
+
+    # Phrases in any supported language (inputs, never shown to patients).
+    triggers: list[str] = Field(min_length=1)
+    answer: LocalizedText
+    draft: bool = True
+
+
+class Conversation(_Strict):
+    """Text for the channel-agnostic flow engine (salesbot_core.flow).
+
+    Every patient-facing sentence comes from `messages`, with {placeholders} filled by the
+    engine. The engine checks that every message it needs is present.
+    """
+
+    messages: dict[str, LocalizedText]
+    # Phrases that signal an intent, in any supported language (inputs, never shown).
+    # A trailing * matches any word with that prefix: "बदल*" matches "बदलायची".
+    intents: dict[Intent, list[str]]
+    sincere_ask: SincereAsk
+    # Sent by live channels instead of the emergency message while that is DRAFT. Numbers and
+    # symbols only, no wording, so it is the same in every language and needs no review.
+    emergency_fallback: str
+
+    @field_validator("emergency_fallback")
+    @classmethod
+    def _numbers_only(cls, value: str) -> str:
+        names = {name for _, name, _, _ in Formatter().parse(value) if name}
+        if not {"clinic_phone", "emergency_numbers"} <= names:
+            raise ValueError("emergency_fallback needs {clinic_phone} and {emergency_numbers}")
+        if any(ch.isalpha() for ch in re.sub(r"\{[a-z_]+\}", "", value)):
+            raise ValueError("emergency_fallback must not contain words, only placeholders")
+        return value
+
+
 class Pack(_Strict):
     id: str = Field(pattern=r"^[a-z][a-z0-9_]*$")
     name: str
@@ -74,6 +128,11 @@ class Pack(_Strict):
     emergency: EmergencyConfig | None = None
     # Pack-specific CRM stages, in order. The generic funnel events live in salesbot_core.events.
     lead_stages: list[str] = Field(min_length=2)
+    conversation: Conversation | None = None
+    # DRAFT text is never sent to real patients (salesbot_core.flow.drafts). Whole languages
+    # awaiting native review, and individual conversation messages awaiting review.
+    draft_languages: list[Language] = Field(default_factory=list)
+    draft_messages: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _unique_ids(self) -> Pack:
@@ -85,7 +144,16 @@ class Pack(_Strict):
             dupes = {x for x in items if items.count(x) > 1}
             if dupes:
                 raise ValueError(f"duplicate {label}: {sorted(dupes)}")
+        known = set(self.conversation.messages) if self.conversation else set()
+        unknown = set(self.draft_messages) - known
+        if unknown:
+            raise ValueError(f"draft_messages names unknown messages: {sorted(unknown)}")
         return self
+
+    def is_draft(self, language: Language, message_key: str | None = None) -> bool:
+        if language in self.draft_languages:
+            return True
+        return message_key is not None and message_key in self.draft_messages
 
     def service(self, service_id: str) -> Service:
         for s in self.services:
