@@ -244,7 +244,7 @@ def test_dry_run_adapter_never_touches_the_network(monkeypatch):
 
 def test_sarvam_adapter_refuses_without_settings():
     with pytest.raises(SarvamNotConfiguredError):
-        SarvamOutboundAdapter(Settings(_env_file=None, sarvam_api_key="k"))
+        SarvamOutboundAdapter(Settings(_env_file=None, sarvam_voice_api_key="k"))
 
 
 def test_sarvam_adapter_sends_the_documented_request(monkeypatch):
@@ -257,7 +257,7 @@ def test_sarvam_adapter_sends_the_documented_request(monkeypatch):
     monkeypatch.setattr(httpx, "post", fake_post)
     settings = Settings(
         _env_file=None,
-        sarvam_api_key="key",
+        sarvam_voice_api_key="key",
         sarvam_org_id="org",
         sarvam_workspace_id="ws",
         sarvam_app_id="app",

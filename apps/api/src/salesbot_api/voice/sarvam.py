@@ -87,7 +87,7 @@ class SarvamOutboundAdapter(OutboundCallAdapter):
         missing = [
             n
             for n in (
-                "sarvam_api_key",
+                "sarvam_voice_api_key",
                 "sarvam_org_id",
                 "sarvam_workspace_id",
                 "sarvam_app_id",
@@ -103,8 +103,8 @@ class SarvamOutboundAdapter(OutboundCallAdapter):
 
     def place(self, request: OutboundRequest) -> str:
         s = self._s
-        if s.sarvam_api_key is None:
-            raise SarvamNotConfiguredError("SARVAM_API_KEY is not set")
+        if s.sarvam_voice_api_key is None:
+            raise SarvamNotConfiguredError("SARVAM_VOICE_API_KEY is not set")
         app_config: dict[str, Any] = {
             "app_id": s.sarvam_app_id,
             "app_version": s.sarvam_app_version,
@@ -129,7 +129,7 @@ class SarvamOutboundAdapter(OutboundCallAdapter):
         response = httpx.post(
             url,
             json=body,
-            headers={"X-API-Key": s.sarvam_api_key.get_secret_value()},
+            headers={"X-API-Key": s.sarvam_voice_api_key.get_secret_value()},
             timeout=TIMEOUT,
         )
         response.raise_for_status()
@@ -152,7 +152,7 @@ class SarvamAnalytics(AnalyticsClient):
 
     def __init__(self, settings: Settings) -> None:
         if not (
-            settings.sarvam_api_key
+            settings.sarvam_voice_api_key
             and settings.sarvam_org_id
             and settings.sarvam_workspace_id
             and settings.sarvam_app_id
@@ -162,15 +162,15 @@ class SarvamAnalytics(AnalyticsClient):
 
     def turn_languages(self, interaction_id: str) -> list[str]:
         s = self._s
-        if s.sarvam_api_key is None:
-            raise SarvamNotConfiguredError("SARVAM_API_KEY is not set")
+        if s.sarvam_voice_api_key is None:
+            raise SarvamNotConfiguredError("SARVAM_VOICE_API_KEY is not set")
         url = (
             f"{BASE}/analytics/v1/{quote(s.sarvam_org_id or '')}/"
             f"{quote(s.sarvam_workspace_id or '')}/{quote(s.sarvam_app_id or '')}/transcripts/"
             f"{quote(interaction_id, safe='')}"
         )
         response = httpx.get(
-            url, headers={"X-API-Key": s.sarvam_api_key.get_secret_value()}, timeout=TIMEOUT
+            url, headers={"X-API-Key": s.sarvam_voice_api_key.get_secret_value()}, timeout=TIMEOUT
         )
         response.raise_for_status()
         return [m["language_name"] for m in response.json().get("messages", [])]

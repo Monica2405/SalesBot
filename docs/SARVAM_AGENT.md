@@ -17,8 +17,9 @@ this file says so instead of guessing.
 
 | Value | Where to find it | Goes to |
 |---|---|---|
-| Organisation id, workspace id | Dashboard URL or Settings | `.env`: `SARVAM_ORG_ID`, `SARVAM_WORKSPACE_ID` |
-| API key | Settings -> API Key (create; shown once) | `.env`: `SARVAM_API_KEY` (header `X-API-Key`) |
+| Organisation id | Settings -> Organisation -> General (copy button) | `.env`: `SARVAM_ORG_ID` |
+| Workspace id | Settings -> Workspace -> General (copy button) | `.env`: `SARVAM_WORKSPACE_ID` |
+| Voice Agents API key | Voice Agents dashboard: Settings -> API Key (create; shown once). Not the Model API key | `.env`: `SARVAM_VOICE_API_KEY` (header `X-API-Key`) |
 | Agent id | Agent's ··· menu -> Copy agent ID (after step 2) | `.env`: `SARVAM_APP_ID` |
 | Agent version | The committed version number (after step 8) | `.env`: `SARVAM_APP_VERSION` |
 | Connection id, agent number | Deploy -> Phone Numbers (after renting, needs KYC: **owner's go**) | `.env`: `SARVAM_CONNECTION_ID`, `SARVAM_AGENT_PHONE_NUMBER` |
@@ -163,9 +164,13 @@ Commit, note the version number in `.env` (`SARVAM_APP_VERSION`).
 - **Webhook** (`webhook_config`): URL `{PUBLIC_BASE_URL}/api/v1/voice/webhooks/{VOICE_WEBHOOK_SECRET}/inbound`,
   metadata `{"clinic": "<slug>"}`. Sarvam documents no signature on this webhook, so the URL
   carries the secret; keep the URL private.
-- Settings -> Workspace -> **Data retention**: owner decision (open). Until a period is set,
-  Sarvam keeps recordings and transcripts **indefinitely**; zero retention is not available for
-  Voice Agents.
+- **Before any call** (test calls included), the org Owner sets a retention period on
+  Settings -> Workspace -> **Data retention** (https://indus.sarvam.ai/settings/workspace/data-retention),
+  with the Voice Agents product override if it should differ. Until a period is set, Sarvam
+  keeps recordings and transcripts **indefinitely**; zero retention is not available for Voice
+  Agents. The period itself is an open DPDP decision.
+- **Once deployed** (stable host, not a quick tunnel), set `VOICE_IP_ALLOWLIST` to Sarvam's
+  documented IPs.
 
 ## 10. Test cases for simulated runs (₹2 each: ask the owner first)
 

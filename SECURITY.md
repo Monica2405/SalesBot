@@ -24,7 +24,7 @@
 
 ## Voice platform (Sarvam) credentials
 
-- `SARVAM_API_KEY` is server-only and spends credits from the organisation's shared wallet. It is
+- `SARVAM_VOICE_API_KEY` is server-only and spends credits from the organisation's shared wallet. It is
   never printed, logged or put in the agent definition.
 - `VOICE_TOOL_SECRET` authenticates Sarvam's calls to our tools and hooks (bearer token). It is
   stored in Sarvam's Settings -> Secrets, never typed into a tool config.

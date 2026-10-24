@@ -40,6 +40,13 @@ the owner's sign-off (see CLAUDE.md).
 - The pack stays the source of truth: the Sarvam agent instruction, greetings and FAQ text
   are generated from it (`make voice-agent`, embedded in `docs/SARVAM_AGENT.md`).
 - Prices and limits: `docs/COSTS.md`.
+- **Before and during voice testing (owner, 2026-10-24):**
+  - **Set a workspace retention period before any call**, test calls included (Settings ->
+    Workspace -> Data retention; org Owner only). Until then Sarvam keeps recordings and
+    transcripts indefinitely.
+  - **Voice testing on the owner's team's phones only.**
+  - **Enable the IP allowlist (`VOICE_IP_ALLOWLIST`) once deployed** on a stable host.
+  - No number rental, no simulated test runs and no outbound calls without the owner's go.
 - **Spend guard (owner, 2026-10-24):** anything we start that spends credits (outbound calls,
   simulated test runs) is checked against a **per-session cap (default ₹100)** and a **per-day
   cap (default ₹500, IST)**, both configurable (`SPEND_SESSION_CAP_INR`, `SPEND_DAILY_CAP_INR`),
@@ -191,7 +198,9 @@ on it.
 - **API keys:** the Voice Agents APIs take a workspace API key in the `X-API-Key` header (Settings
   -> API Key); Analytics refuses bearer tokens. Model APIs document `api-subscription-key` (or
   bearer) with keys from the dashboard's API Keys section. The docs do not say whether one key
-  works for both; ours is used only for Voice Agents.
+  works for both. **Decision (owner, 2026-10-24):** a dedicated Voice Agents workspace key in
+  `SARVAM_VOICE_API_KEY`; the Model API key stays unused. Org id: Settings -> Organisation ->
+  General; workspace id: Settings -> Workspace -> General.
 - **WhatsApp channel:** Sarvam lists WhatsApp as a channel, but its pricing page says Enterprise
   "adds workflows, WhatsApp campaigns, custom tool authoring, custom rate limits"; Enterprise
   starts at 2 lakh minutes a month. Questions for Sarvam sales if we ever revisit: is an inbound
