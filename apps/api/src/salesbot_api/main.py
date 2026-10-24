@@ -4,15 +4,33 @@ from __future__ import annotations
 
 from typing import Annotated, Any
 
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, Request, status
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 
 from salesbot_api import api_v1, db
 from salesbot_api.auth import AuthUser, current_user
 from salesbot_api.settings import Settings, get_settings
+from salesbot_api.voice import tools as voice_tools
+from salesbot_api.voice import webhooks as voice_webhooks
 from salesbot_core.packs import load_all_packs
 
 app = FastAPI(title="SalesBot API", version="0.1.0")
 app.include_router(api_v1.router)
+app.include_router(voice_tools.router)
+app.include_router(voice_webhooks.router)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error(request: Request, exc: RequestValidationError) -> JSONResponse:
+    """422 with field names only. The default body echoes the input back, which on the voice
+    and intake endpoints can be personal data."""
+    fields = sorted({".".join(str(p) for p in e["loc"]) for e in exc.errors()})
+    body: dict[str, Any] = {"detail": "invalid request", "fields": fields}
+    if request.url.path.startswith("/api/v1/voice/"):
+        body.update(ok=False, code="invalid_request")
+    return JSONResponse(status_code=422, content=body)
+
 
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 

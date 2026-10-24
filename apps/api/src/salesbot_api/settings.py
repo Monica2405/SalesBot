@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
 from functools import lru_cache
 from typing import Literal
 
@@ -60,6 +61,15 @@ class Settings(BaseSettings):
     # Real outbound calls stay off until the owner says so. Off = dry run: log and record what
     # would be called, never dial.
     outbound_calls_enabled: bool = False
+    # Public HTTPS base of this API, for the webhook URL sent with outbound calls.
+    public_base_url: str | None = None
+
+    # Spend guard for the shared Sarvam credit wallet (docs/COSTS.md). Outbound calls and test
+    # runs we start are blocked once a cap would be passed. A session is one API process
+    # unless SPEND_SESSION_ID names it.
+    spend_session_cap_inr: Decimal = Decimal("100")
+    spend_daily_cap_inr: Decimal = Decimal("500")
+    spend_session_id: str | None = None
 
     call_max_seconds: int = 600
     default_business_usage_cap_minutes: int = 500
