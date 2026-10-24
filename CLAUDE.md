@@ -58,8 +58,7 @@ When designing anything, ask: *what does this let us measure or convert?* See do
 Python 3.12 + uv workspace (`packages/core`, `apps/api`) · FastAPI + Pydantic Settings ·
 psycopg 3 · React + TypeScript + Vite + react-router + @supabase/supabase-js · Supabase
 (Postgres, Auth, Storage) · Sarvam Voice Agents (managed voice + telephony) · Meta WhatsApp
-Cloud API (own adapter) · ruff · eslint · pytest. No Pipecat. (`apps/voice-agent` is being
-removed in Stage B Step 3.)
+Cloud API (own adapter) · ruff · eslint · pytest. No Pipecat, no voice pipeline of our own.
 
 ## Commands
 
@@ -70,6 +69,8 @@ make lint         # ruff + eslint + tsc
 make format
 make dev-api | dev-admin
 make console ARGS='--lang mr'     # chat with the appointment flow in the terminal (no DB)
+make voice-agent PACK=clinic      # render the Sarvam agent setup from a pack
+make voice-ops ARGS='spend'       # spend caps, test-run guard, outbound dry run, cost actuals
 make db-up | db-reset | db-down   # need Docker + Supabase CLI (local DB currently deferred)
 ```
 
