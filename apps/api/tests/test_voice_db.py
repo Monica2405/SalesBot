@@ -288,6 +288,13 @@ def test_reschedule_moves_atomically_and_stops_old_reminders(api, slug, clinic, 
         run_at=ist(9, day=MONDAY),
         appointment_id=old_id,
     )
+    # Move to a time the agent was actually offered (the grid follows the visit length).
+    offered = call(api, "get_availability", slug, "20300107/call-2",
+                   patient_id=str(clinic.client_id), for_reschedule=True)  # fmt: skip
+    option = next(
+        o for o in offered["data"]["options"] if datetime.fromisoformat(o["starts_at"]) != ist(10)
+    )
+    new_start = datetime.fromisoformat(option["starts_at"])
     r = call(
         api,
         "reschedule",
@@ -295,9 +302,13 @@ def test_reschedule_moves_atomically_and_stops_old_reminders(api, slug, clinic, 
         "20300107/call-2",
         patient_id=str(clinic.client_id),
         appointment_id=old_id,
-        starts_at=ist(12).isoformat(),
+        starts_at=option["starts_at"],
+        practitioner_id=option["practitioner_id"],
     )
-    assert (r["ok"], r["code"]) == (True, "ok") and "12:00 pm" in r["spoken_text"]
+    assert (r["ok"], r["code"]) == (True, "ok")
+    assert datetime.fromisoformat(r["data"]["starts_at"]) == new_start
+    clock = f"{new_start.astimezone(IST).hour % 12 or 12}:{new_start.astimezone(IST):%M}"
+    assert "Monday, 7 January" in r["spoken_text"] and clock in r["spoken_text"]
     old = conn.execute("select * from public.appointments where id = %s", (old_id,)).fetchone()
     assert old["status"] == "rescheduled"
     assert str(old["rescheduled_to_id"]) == r["data"]["appointment_id"]
