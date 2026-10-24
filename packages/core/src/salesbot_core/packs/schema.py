@@ -116,6 +116,22 @@ class Conversation(_Strict):
         return value
 
 
+class VoiceText(_Strict):
+    """Text for the Sarvam voice agent (salesbot_core.voice, docs/SARVAM_AGENT.md).
+
+    `instruction` is the agent's instruction in English, as ordered sections (title -> body).
+    Placeholders are filled by salesbot_core.packs.render_agent. `messages` are the spoken lines
+    our API tools return as `spoken_text`. `sincere_ask_answer` is the one short truthful line
+    for a sincere "am I talking to a machine?"; it is DRAFT until reviewed and is the only voice
+    text allowed to mention automation.
+    """
+
+    instruction: dict[str, str] = Field(min_length=1)
+    messages: dict[str, LocalizedText]
+    sincere_ask_answer: LocalizedText
+    sincere_ask_draft: bool = True
+
+
 class Pack(_Strict):
     id: str = Field(pattern=r"^[a-z][a-z0-9_]*$")
     name: str
@@ -129,6 +145,7 @@ class Pack(_Strict):
     # Pack-specific CRM stages, in order. The generic funnel events live in salesbot_core.events.
     lead_stages: list[str] = Field(min_length=2)
     conversation: Conversation | None = None
+    voice: VoiceText | None = None
     # DRAFT text is never sent to real patients (salesbot_core.flow.drafts). Whole languages
     # awaiting native review, and individual conversation messages awaiting review.
     draft_languages: list[Language] = Field(default_factory=list)
@@ -145,6 +162,7 @@ class Pack(_Strict):
             if dupes:
                 raise ValueError(f"duplicate {label}: {sorted(dupes)}")
         known = set(self.conversation.messages) if self.conversation else set()
+        known |= {f"voice.{k}" for k in self.voice.messages} if self.voice else set()
         unknown = set(self.draft_messages) - known
         if unknown:
             raise ValueError(f"draft_messages names unknown messages: {sorted(unknown)}")

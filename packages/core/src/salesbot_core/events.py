@@ -42,6 +42,10 @@ class EventType(StrEnum):
     REMINDER_SENT = "reminder_sent"
     NO_RESPONSE = "no_response"
     HANDOFF_TASK_CREATED = "handoff_task_created"
+    # Voice (Sarvam Voice Agents) and spend control
+    VOICE_TOOL_CALLED = "voice_tool_called"
+    OUTBOUND_CALL_REQUESTED = "outbound_call_requested"
+    SPEND_CAP_REACHED = "spend_cap_reached"
 
 
 # The headline funnel, in order. Conversion between consecutive stages is the core metric.

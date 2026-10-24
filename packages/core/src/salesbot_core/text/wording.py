@@ -58,9 +58,17 @@ def forbidden_terms(text: str) -> list[str]:
     return found
 
 
+def forbidden_terms_except(text: str, allowed: list[str]) -> list[str]:
+    """Scan rendered text (e.g. the generated voice agent instruction) after removing the
+    allowlisted lines, which are only ever the sincere-ask answers."""
+    for line in allowed:
+        text = text.replace(line, " ")
+    return forbidden_terms(text)
+
+
 def patient_texts(pack: Pack) -> Iterator[tuple[str, Language, str]]:
     """Every patient-facing text in a pack as (where, language, text), except the sincere-ask
-    answer, which is the one place automation may be mentioned."""
+    answer (text and voice), which is the one place automation may be mentioned."""
     for language, text in pack.greeting.items():
         yield "greeting", language, text
     for q in pack.intake_questions:
@@ -76,6 +84,12 @@ def patient_texts(pack: Pack) -> Iterator[tuple[str, Language, str]]:
     if pack.emergency is not None:
         for language, text in pack.emergency.message.items():
             yield "emergency.message", language, text
+    if pack.voice is not None:
+        for title, body in pack.voice.instruction.items():
+            yield f"voice.instruction.{title}", "en", body
+        for key, localized in pack.voice.messages.items():
+            for language, text in localized.items():
+                yield f"voice.messages.{key}", language, text
     if pack.conversation is not None:
         yield "conversation.emergency_fallback", "en", pack.conversation.emergency_fallback
         for key, localized in pack.conversation.messages.items():
