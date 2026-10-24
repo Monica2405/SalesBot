@@ -59,14 +59,14 @@ values ('cccccccc-cccc-cccc-cccc-cccccccccccc', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaa
 insert into public.calls (
   id, business_id, lead_id, script_version_id, source, telephony_provider, provider_call_id,
   from_number, to_number, language, status, outcome, consent_recording,
-  started_at, ended_at, duration_seconds, stt_seconds, llm_tokens_in, llm_tokens_out, tts_characters
+  started_at, ended_at, duration_seconds, agent_minutes, telephony_pulses, cost_inr_estimate
 ) values (
   'dddddddd-dddd-dddd-dddd-dddddddddddd', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
   'cccccccc-cccc-cccc-cccc-cccccccccccc', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
   'google_business', 'mock', 'mock-call-1', '+919999999999', '+910000000000', 'hi',
   'completed', 'booked', true,
   now() - interval '1 day', now() - interval '1 day' + interval '3 minutes', 180,
-  150, 2400, 600, 1800
+  3, 6, 11.70
 );
 
 -- Scheduling: one practitioner (Mon-Sat 10:00-13:00 and 17:00-20:00 IST), default settings,
@@ -102,6 +102,6 @@ insert into public.events (business_id, type, call_id, lead_id, source, occurred
   ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'lead_captured', 'dddddddd-dddd-dddd-dddd-dddddddddddd', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'google_business', now() - interval '1 day'),
   ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'booking_created', 'dddddddd-dddd-dddd-dddd-dddddddddddd', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'google_business', now() - interval '1 day');
 
-insert into public.usage_records (business_id, call_id, period_month, call_seconds, stt_seconds, llm_tokens_in, llm_tokens_out, tts_characters)
+insert into public.usage_records (business_id, call_id, period_month, call_seconds, agent_minutes, telephony_pulses)
 values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'dddddddd-dddd-dddd-dddd-dddddddddddd',
-        date_trunc('month', now())::date, 180, 150, 2400, 600, 1800);
+        date_trunc('month', now())::date, 180, 3, 6);
